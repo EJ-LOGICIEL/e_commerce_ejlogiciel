@@ -117,20 +117,6 @@ class Achat(models.Model):
         super().save(*args, **kwargs)
 
 
-class ElementAchat(models.Model):
-    achat = models.ForeignKey(
-        Achat, on_delete=models.CASCADE, related_name="elements_achat"
-    )
-    produit = models.ForeignKey(
-        Produit, on_delete=models.CASCADE, related_name="produits"
-    )
-    quantite = models.PositiveIntegerField(default=1)
-    prix_total = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.cle.contenue} - {self.quantite}"
-
-
 class Devis(models.Model):
 
     client = models.ForeignKey(
@@ -149,3 +135,28 @@ class Devis(models.Model):
     def save(self, *args, **kwargs):
         self.code_devis = f"devis-{self.id}"
         super().save(*args, **kwargs)
+
+
+class ElementAchatDevis(models.Model):
+    achat = models.ForeignKey(
+        Achat,
+        on_delete=models.CASCADE,
+        related_name="elements_achat",
+        blank=True,
+        null=True,
+    )
+    devis = models.ForeignKey(
+        Devis,
+        on_delete=models.CASCADE,
+        related_name="elements_devis",
+        blank=True,
+        null=True,
+    )
+    produit = models.ForeignKey(
+        Produit, on_delete=models.CASCADE, related_name="produits"
+    )
+    quantite = models.PositiveIntegerField(default=1)
+    prix_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.cle.contenue} - {self.quantite}"
