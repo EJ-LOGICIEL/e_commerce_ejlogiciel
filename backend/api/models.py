@@ -11,9 +11,8 @@ class Utilisateur(AbstractUser):
         ("admin", "Admin"),
     ]
 
-    nom = models.CharField(max_length=30)
-    prenom = models.CharField(max_length=30, null=True, blank=True)
-    role = models.CharField(max_length=100, choices=CHOIX_ROLE)
+    nom_complet = models.CharField(max_length=30)
+    role = models.CharField(max_length=100, choices=CHOIX_ROLE, default="client")
     numero_telephone = models.CharField(max_length=15)
     adresse = models.CharField(max_length=100)
     code_utilisateur = models.CharField(max_length=50, null=True, blank=True)
@@ -23,7 +22,7 @@ class Utilisateur(AbstractUser):
     rcs = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return self.nom
+        return self.nom_complet
 
     def save(self, *args, **kwargs):
         self.code_utilisateur = f"{self.role}-{self.id}"
@@ -106,12 +105,12 @@ class Action(models.Model):
     payee = models.BooleanField(default=False)
 
     client = models.ForeignKey(
-        Utilisateur, on_delete=models.CASCADE, related_name="actions"
+        Utilisateur, on_delete=models.CASCADE, related_name="actions_client"
     )
     vendeur = models.ForeignKey(
         Utilisateur,
         on_delete=models.CASCADE,
-        related_name="actions",
+        related_name="actions_vendeur",
         blank=True,
         null=True,
     )
