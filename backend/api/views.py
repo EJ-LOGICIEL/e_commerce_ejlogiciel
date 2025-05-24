@@ -4,8 +4,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .models import Utilisateur
-from .serializers import UserSerializer
+from .custom_permissions import IsAdmin
+from .models import Utilisateur, Produit
+from .serializers import UserSerializer, ProduitSerializer
 
 
 class ClientSignUpAPIView(generics.CreateAPIView):
@@ -47,3 +48,41 @@ class CustomTokenRefreshView(TokenRefreshView):
             secure=True,
         )
         return res
+
+
+class LogoutView(generics.GenericAPIView):
+    """Endpoint pour déconnecter un utilisateur."""
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        response = Response({"detail": "Successfully logged out."})
+        response.delete_cookie("refresh_token")
+        return response
+
+
+# Client : Produit
+class ListProductsAPIView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    queryset = Produit.objects.all()
+    serializer_class = ProduitSerializer
+    filterset_fields = ["categorie", "prix"]
+
+
+class ProductDetailAPIView(generics.RetrieveAPIView):
+    permission_classes = [AllowAny]
+    queryset = Produit.objects.all()
+    serializer_class = ProduitSerializer
+    lookup_field = "pk"
+
+
+# Admin : Produit
+class CreateProductAPIView(generics.CreateAPIView):
+    permission_classes = [IsAdmin]
+    queryset = Produit.objects.all()
+    serializer_class = ProduitSerializer
+
+
+class RetrieveUpdateDestroyProductAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdmin]
+    queryset = Produit.objects.all()
+    serializer_class = ProduitSerializer
+    lookup_field = "pk"
