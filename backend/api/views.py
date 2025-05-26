@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
-from .custom_permissions import IsAdmin
+from .custom_permissions import IsAdmin, IsAdminOrVendeur
 from .models import (
     Utilisateur,
     Produit,
@@ -144,3 +144,39 @@ class MethodePaiementDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "pk"
 
 
+# Actions
+
+
+# cree une action manuellement
+class ActionListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = ActionSerializer
+    filterset_fields = ["type", "client", "vendeur"]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return Action.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(vendeur=self.request.user)
+
+
+class ActionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdminOrVendeur]
+
+    def get_queryset(self):
+        if self.request.user.role == "client":
+            return Action.objects.filter(client=self.request.user)
+        elif self.request.user.role == "vendeur":
+            return Action.objects.filter(vendeur=self.request.user)
+        else:
+            return Action.objects.all()
+
+    serializer_class = ActionSerializer
+    lookup_field = "pk"
