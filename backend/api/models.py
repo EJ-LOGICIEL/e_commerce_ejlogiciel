@@ -1,8 +1,5 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-import uuid
-
-from rest_framework.views import APIView
 
 
 class Utilisateur(AbstractUser):
@@ -126,7 +123,7 @@ class Action(models.Model):
         return f"{self.type} - {self.client.nom} - {self.code_action}"
 
     def save(self, *args, **kwargs):
-        self.code_action = f"EJ{uuid.uuid4().hex[:4]}-{self.id}"
+        self.code_action = f"EJ-{self.type}-{self.id}"
         super().save(*args, **kwargs)
 
 
@@ -145,3 +142,16 @@ class ElementAchatDevis(models.Model):
     )
     quantite = models.PositiveIntegerField(default=1)
     prix_total = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+class EmailEchec(models.Model):
+
+    client = models.ForeignKey(Utilisateur, on_delete=models.CASCADE)
+    action = models.ForeignKey(Action, on_delete=models.CASCADE)
+    date_echec = models.DateTimeField(auto_now_add=True)
+    erreur = models.TextField()
+    donnees = models.TextField()
+    resolu = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Échec email pour {self.client.email} - {self.date_echec}"

@@ -1,12 +1,10 @@
+from django.db import transaction
 from rest_framework import generics
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from django.db import transaction
-from rest_framework import status
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .custom_permissions import IsAdmin, IsAdminOrVendeur
 from .models import (
@@ -14,8 +12,6 @@ from .models import (
     Produit,
     Categorie,
     MethodePaiement,
-    Action,
-    ElementAchatDevis,
     Cle,
 )
 from .serializers import (
@@ -24,7 +20,9 @@ from .serializers import (
     CategorieSerializer,
     MethodePaiementSerializer,
     ActionSerializer,
+    ElementAchatDevisSerializer,
 )
+from .tasks import envoyer_cles_email_async, logger
 
 
 class ClientSignUpAPIView(generics.CreateAPIView):
@@ -148,35 +146,109 @@ class MethodePaiementDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 
 # cree une action manuellement
-class ActionListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = ActionSerializer
-    filterset_fields = ["type", "client", "vendeur"]
+class ActionCreateAPIView(APIView):
+    permission_classes = [IsAdminOrVendeur]
 
-    def get_permissions(self):
-        if self.request.method == "GET":
-            return [AllowAny()]
-        return [IsAdmin()]
+    @transaction.atomic
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        action_data = request.data.get("action")
+        produits_data = request.data.get("produits")
 
-    def get_queryset(self):
-        return Action.objects.all()
+        if not action_data or not produits_data:
+            return Response(
+                {"error": "Données incomplètes. Action et produits requis."}, status=400
+            )
 
-    def perform_create(self, serializer):
-        serializer.save(vendeur=self.request.user)
+        # Préchargement des produits en une seule requête
+        produit_ids = [item["produit"] for item in produits_data]
+        produits_map = {
+            str(p.id): p for p in Produit.objects.filter(id__in=produit_ids)
+        }
 
+        if len(produits_map) != len(produit_ids):
+            return Response({"error": "Certains produits n'existent pas."}, status=400)
 
-class ActionDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    def get_permissions(self):
-        if self.request.method == "GET":
-            return [AllowAny()]
-        return [IsAdminOrVendeur]
+        action_serializer = ActionSerializer(data=action_data)
+        if not action_serializer.is_valid():
+            return Response(action_serializer.errors, status=400)
 
-    def get_queryset(self):
-        if self.request.user.role == "client":
-            return Action.objects.filter(client=self.request.user)
-        elif self.request.user.role == "vendeur":
-            return Action.objects.filter(vendeur=self.request.user)
-        else:
-            return Action.objects.all()
+        for item in produits_data:
+            produit_id = item["produit"]
+            produit = produits_map[str(produit_id)]
 
-    serializer_class = ActionSerializer
-    lookup_field = "pk"
+            # Compter les clés disponibles pour ce produit
+            count = Cle.objects.filter(produit=produit, disponiblite=True).count()
+            if count < 2:
+                return Response(
+                    {
+                        "error": f"Pas assez de clés disponibles pour {produit.nom}. Seulement {count} disponible(s)."
+                    },
+                    status=400,
+                )
+
+        action = action_serializer.save(vendeur=request.user)
+
+        elements_data = []
+        for item in produits_data:
+            item["action"] = action.id
+            elements_data.append(item)
+
+        elements_serializer = ElementAchatDevisSerializer(data=elements_data, many=True)
+        if not elements_serializer.is_valid():
+            return Response(elements_serializer.errors, status=400)
+
+        elements_serializer.save()
+
+        cles_selectionnees = {}
+
+        for item in produits_data:
+            produit_id = item["produit"]
+            produit = produits_map[str(produit_id)]
+
+            # Sélectionner et verrouiller exactement 2 clés disponibles
+            cles = Cle.objects.select_for_update().filter(
+                produit=produit, disponiblite=True
+            )[:2]
+
+            cles_list = list(cles)
+
+            if len(cles_list) < 2:
+                logger.error(
+                    f"Race condition détectée: clés pour {produit.nom} non disponibles"
+                )
+                return Response(
+                    {
+                        "error": f"Pas assez de clés disponibles pour {produit.nom}. Seulement {len(cles_list)} disponible(s)."
+                    },
+                    status=400,
+                )
+
+            cles_selectionnees[produit.nom] = []
+
+            cle_ids = [cle.id for cle in cles_list]
+            Cle.objects.filter(id__in=cle_ids).update(disponiblite=False)
+
+            for cle in cles_list:
+                cles_selectionnees[produit.nom].append(
+                    {
+                        "id": cle.id,
+                        "contenue": cle.contenue,
+                        "code_cle": cle.code_cle,
+                        "validite": cle.validite,
+                    }
+                )
+
+        client = Utilisateur.objects.get(id=action_data["client"])
+
+        # 8. Envoyer les clés par email de manière asynchrone
+        envoyer_cles_email_async.delay(
+            client_id=client.id, action_id=action.id, cles_data=cles_selectionnees
+        )
+
+        return Response(
+            {
+                "detail": "Action créée avec succès. Les clés ont été envoyées par email.",
+                "action_id": action.id,
+                "cles": cles_selectionnees,
+            }
+        )

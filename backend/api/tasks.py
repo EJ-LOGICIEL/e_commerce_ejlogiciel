@@ -1,62 +1,108 @@
 import io
+import json
+import logging
+
 from celery import shared_task
-from reportlab.pdfgen import canvas
 from django.core.mail import EmailMessage
 from django.utils.timezone import localtime
-from .models import Action
+from reportlab.pdfgen import canvas
+
+from .models import Action, Utilisateur, EmailEchec
+
+logger = logging.getLogger(__name__)
 
 
-@shared_task
-def generer_et_envoyer_facture_async(action_id):
+@shared_task(bind=True, max_retries=3, rate_limit="10/m")
+def envoyer_cles_email_async(self, client_id, action_id, cles_data):
+    """
+    Envoie un email contenant les clés d'activation au client.
+    """
     try:
-        action = (
-            Action.objects.select_related("client")
-            .prefetch_related("elements__produit")
-            .get(pk=action_id)
+        client = Utilisateur.objects.get(id=client_id)
+        action = Action.objects.get(id=action_id)
+
+        # Générer la facture PDF
+        buffer = io.BytesIO()
+        p = canvas.Canvas(buffer)
+
+        # En-tête
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(200, 800, f"FACTURE #{action.code_action}")
+
+        # Informations client
+        p.setFont("Helvetica", 12)
+        p.drawString(100, 770, f"Client : {client.nom_complet}")
+        p.drawString(100, 750, f"Email : {client.email}")
+        p.drawString(
+            100,
+            730,
+            f"Date : {localtime(action.date_action).strftime('%d-%m-%Y %H:%M')}",
         )
-    except Action.DoesNotExist:
-        return "Action introuvable"
+        p.drawString(100, 710, f"Code : {action.code_action}")
 
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer)
-
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(200, 800, "FACTURE")
-
-    p.setFont("Helvetica", 12)
-    p.drawString(100, 770, f"Client : {action.client.nom_complet}")
-    p.drawString(100, 750, f"Email : {action.client.email}")
-    p.drawString(
-        100, 730, f"Date : {localtime(action.date_action).strftime('%Y-%m-%d %H:%M')}"
-    )
-    p.drawString(100, 710, f"Code Action : {action.code_action}")
-
-    y = 680
-    p.drawString(100, y, "Produits achetés :")
-    y -= 20
-
-    for item in action.elements.all():
-        ligne = f"- {item.produit.nom} x{item.quantite} = {item.prix_total} MGA"
-        p.drawString(120, y, ligne)
+        # Produits achetés
+        y = 680
+        p.drawString(100, y, "Produits achetés :")
         y -= 20
 
-    y -= 10
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(100, y, f"Total payé : {action.prix} MGA")
+        for produit_nom, cles in cles_data.items():
+            p.drawString(120, y, f"- {produit_nom} x{len(cles)}")
+            y -= 20
 
-    p.showPage()
-    p.save()
+        # Total
+        y -= 10
+        p.setFont("Helvetica-Bold", 12)
+        p.drawString(100, y, f"Total payé : {action.prix} MGA")
 
-    buffer.seek(0)
+        p.showPage()
+        p.save()
+        buffer.seek(0)
 
-    email = EmailMessage(
-        subject="Votre facture",
-        body="Merci pour votre achat. Vous trouverez votre facture en pièce jointe.",
-        to=[action.client.email],
-    )
+        corps_message = f"""
+        Bonjour {client.nom_complet},
 
-    email.attach(f"facture.pdf", buffer.read(), "application/pdf")
-    email.send()
+        Merci pour votre commande #{action.code_action}.
 
-    buffer.close()
-    return f"Facture envoyée à {action.client.email}"
+        Veuillez trouver ci-joint votre facture et les clés d'activation.
+
+        Cordialement,
+        L'équipe EJ Logiciel
+        """
+
+        # Envoyer l'email avec gestion des erreurs
+        try:
+            email = EmailMessage(
+                subject=f"Vos clés - Commande #{action.code_action}",
+                body=corps_message,
+                to=[client.email],
+            )
+            email.attach(
+                f"facture_{action.code_action}.pdf", buffer.read(), "application/pdf"
+            )
+            email.send(fail_silently=False)
+
+            logger.info(
+                f"Email avec clés envoyé à {client.email} pour l'action {action.code_action}"
+            )
+            return f"Email avec clés envoyé à {client.email}"
+        except Exception as email_error:
+            logger.error(f"Erreur lors de l'envoi de l'email: {str(email_error)}")
+            # Enregistrer l'échec dans la base de données pour suivi
+            EmailEchec.objects.create(
+                client=client,
+                action=action,
+                erreur=str(email_error),
+                donnees=json.dumps(cles_data),
+            )
+            raise
+        finally:
+            buffer.close()
+
+    except (Utilisateur.DoesNotExist, Action.DoesNotExist) as e:
+        logger.error(f"Entité introuvable: {str(e)}")
+        return f"Erreur: {str(e)}"
+
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'email: {str(e)}")
+        countdown = 60 * (2**self.request.retries)  # 1min, 2min, 4min, etc.
+        raise self.retry(exc=e, countdown=countdown)
