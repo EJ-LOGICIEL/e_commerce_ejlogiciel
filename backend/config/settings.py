@@ -36,6 +36,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 CORS_ALLOWED_ORIGINS = os.getenv(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 ).split(",")
+
 CORS_ALLOW_CREDENTIALS = True
 
 # Celery Configuration optimisée pour la haute disponibilité
@@ -106,6 +107,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework_simplejwt.token_blacklist",
     "django_filters",
+    "drf_spectacular",
 ]
 
 REST_FRAMEWORK = {
@@ -116,6 +118,7 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
@@ -225,3 +228,32 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+
+# Configuration de drf-spectacular
+SPECTACULAR_SETTINGS = {
+    "TITLE": "EJ Logiciel API",
+    "DESCRIPTION": "API pour la gestion des produits, clés et ventes de logiciels",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": r"/api/",
+    "CONTACT": {
+        "name": "Support EJ Logiciel",
+        "email": "support@ejlogiciel.com",
+    },
+    "LICENSE": {"name": "Propriétaire"},
+    "TAGS": [
+        {"name": "Authentication", "description": "Endpoints d'authentification"},
+        {"name": "Produits", "description": "Gestion des produits"},
+        {"name": "Catégories", "description": "Gestion des catégories de produits"},
+        {"name": "Clés", "description": "Gestion des clés d'activation"},
+        {"name": "Actions", "description": "Gestion des achats et devis"},
+        {"name": "Utilisateurs", "description": "Gestion des utilisateurs"},
+        {"name": "Statistiques", "description": "Statistiques et tableaux de bord"},
+    ],
+}

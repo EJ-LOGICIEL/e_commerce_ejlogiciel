@@ -5,9 +5,12 @@ from .views import (
     CustomTokenObtainPairView,
     CustomTokenRefreshView,
     LogoutView,
-    ListProductsAPIView,
-    ProductDetailAPIView,
-    CreateProductAPIView,
+    CategorieListCreateAPIView,
+    RetrieveUpdateDestroyCategoryAPIView,
+    ProduitListCreateAPIView,
+    RetrieveUpdateDestroyProduitAPIView,
+    MethodePaiementListCreateAPIView,
+    MethodePaiementDetailAPIView,
 )
 
 urlpatterns = [
@@ -16,8 +19,33 @@ urlpatterns = [
     path("token/", CustomTokenObtainPairView.as_view(), name="login"),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
-    # Products
-    path("products/", ListProductsAPIView.as_view(), name="product-list"),
-    path("products/create/", CreateProductAPIView.as_view(), name="product-create"),
-    path("products/<int:pk>/", ProductDetailAPIView.as_view(), name="product-detail"),
+    # Categories
+    path(
+        "categories/",
+        CategorieListCreateAPIView.as_view(),
+        name="categorie-list-create",
+    ),
+    path(
+        "categories/<int:pk>/",
+        RetrieveUpdateDestroyCategoryAPIView.as_view(),
+        name="categorie-retrieve-update-destroy",
+    ),
+    # Produits
+    path("produits/", ProduitListCreateAPIView.as_view(), name="produit-list-create"),
+    path(
+        "produits/<int:pk>/",
+        RetrieveUpdateDestroyProduitAPIView.as_view(),
+        name="produit-retrieve-update-destroy",
+    ),
+    # Methode Paiement
+    path(
+        "methode-paiement/",
+        MethodePaiementListCreateAPIView.as_view(),
+        name="methode-paiement-list-create",
+    ),
+    path(
+        "methode-paiement/<int:pk>/",
+        MethodePaiementDetailAPIView.as_view(),
+        name="methode-paiement-detail",
+    ),
 ]
