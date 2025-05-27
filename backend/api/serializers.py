@@ -114,7 +114,6 @@ class ElementAchatDevisSerializer(serializers.ModelSerializer):
 
 
 class ActionSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Action
         fields = [
@@ -127,9 +126,10 @@ class ActionSerializer(serializers.ModelSerializer):
             "methode_paiement",
             "code_action",
             "elements",
+            "livree",
+            "payee",
         ]
-
-    read_only_fields = ["code_action, date_action"]
+        read_only_fields = ["code_action", "date_action", "elements"]
 
     def create(self, validated_data):
         action = Action.objects.create(**validated_data)

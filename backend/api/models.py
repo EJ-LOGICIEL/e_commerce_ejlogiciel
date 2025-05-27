@@ -59,7 +59,6 @@ class Produit(models.Model):
 
 
 class Cle(models.Model):
-
     CHOIX_VALIDITE = [
         ("1 ans", "1 ans"),
         ("2 ans", "2 ans"),
@@ -79,7 +78,7 @@ class Cle(models.Model):
         return f"{self.produit.nom} - {self.contenue[:4]}-****-{self.produit.prix}"
 
     def save(self, *args, **kwargs):
-        self.code_cle = f"{self.produit.nom}-{self.id}"
+        self.code_cle = f"{self.produit.nom}-{self._get_pk_val()}"
         super().save(*args, **kwargs)
 
 

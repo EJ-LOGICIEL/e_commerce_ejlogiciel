@@ -11,6 +11,10 @@ from .views import (
     RetrieveUpdateDestroyProduitAPIView,
     MethodePaiementListCreateAPIView,
     MethodePaiementDetailAPIView,
+    CleListCreateAPIView,
+    RetrieveUpdateDestroyCleAPIView,
+    ActionCreateAPIView,
+    DashboardStatsAPIView,
 )
 
 urlpatterns = [
@@ -19,6 +23,18 @@ urlpatterns = [
     path("token/", CustomTokenObtainPairView.as_view(), name="login"),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    # Produits
+    path("produits/", ProduitListCreateAPIView.as_view(), name="produit-list-create"),
+    path(
+        "produits/<int:pk>/",
+        RetrieveUpdateDestroyProduitAPIView.as_view(),
+        name="produit-retrieve-update-destroy",
+    ),
+    # Clés
+    path("cles/", CleListCreateAPIView.as_view(), name="cle-list-create"),
+    path(
+        "cles/<int:pk>/", RetrieveUpdateDestroyCleAPIView.as_view(), name="cle-detail"
+    ),
     # Categories
     path(
         "categories/",
@@ -29,13 +45,6 @@ urlpatterns = [
         "categories/<int:pk>/",
         RetrieveUpdateDestroyCategoryAPIView.as_view(),
         name="categorie-retrieve-update-destroy",
-    ),
-    # Produits
-    path("produits/", ProduitListCreateAPIView.as_view(), name="produit-list-create"),
-    path(
-        "produits/<int:pk>/",
-        RetrieveUpdateDestroyProduitAPIView.as_view(),
-        name="produit-retrieve-update-destroy",
     ),
     # Methode Paiement
     path(
@@ -48,4 +57,8 @@ urlpatterns = [
         MethodePaiementDetailAPIView.as_view(),
         name="methode-paiement-detail",
     ),
+    # action
+    path("actions/", ActionCreateAPIView.as_view(), name="action-create"),
+    # stats
+    path("stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
 ]

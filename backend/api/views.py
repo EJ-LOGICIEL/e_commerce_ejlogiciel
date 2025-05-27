@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .custom_permissions import IsAdmin, IsAdminOrVendeur
+from .custom_permissions import IsAdmin, IsAdminOrVendeur, IsVendeur
 from .models import (
     Utilisateur,
     Produit,
@@ -31,6 +31,7 @@ from .serializers import (
     MethodePaiementSerializer,
     ActionSerializer,
     ElementAchatDevisSerializer,
+    CleSerializer,
 )
 from .tasks import envoyer_cles_email_async, logger
 
@@ -106,33 +107,13 @@ class CustomTokenRefreshView(TokenRefreshView):
     description="Déconnecte l'utilisateur en supprimant le refresh token.",
     responses={200: {"description": "Déconnexion réussie"}},
 )
-class LogoutView(generics.GenericAPIView):
+class LogoutView(APIView):
     """Endpoint pour déconnecter un utilisateur."""
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         response = Response({"detail": "Successfully logged out."})
         response.delete_cookie("refresh_token")
         return response
-
-
-# Catégories
-class CategorieListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = CategorieSerializer
-
-    def get_permissions(self):
-        if self.request.method == "GET":
-            return [AllowAny()]
-        return [IsAdmin()]
-
-    def get_queryset(self):
-        return Categorie.objects.all()
-
-
-class RetrieveUpdateDestroyCategoryAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAdmin]
-    queryset = Categorie.objects.all()
-    serializer_class = CategorieSerializer
-    lookup_field = "pk"
 
 
 # Produits
@@ -211,6 +192,127 @@ class RetrieveUpdateDestroyProduitAPIView(generics.RetrieveUpdateDestroyAPIView)
 
     def get_queryset(self):
         return Produit.objects.all()
+
+
+# cle
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Clés"],
+        summary="Liste toutes les clés",
+        description="Retourne une liste de toutes les clés disponibles.",
+        parameters=[
+            OpenApiParameter(
+                name="produit",
+                description="Filtrer par ID de produit",
+                required=False,
+                type=int,
+            ),
+            OpenApiParameter(
+                name="disponiblite",
+                description="Filtrer par disponibilité",
+                required=False,
+                type=bool,
+            ),
+        ],
+    ),
+    create=extend_schema(
+        tags=["Clés"],
+        summary="Crée une nouvelle clé",
+        description="Crée une nouvelle clé (réservé aux administrateurs).",
+    ),
+)
+class CleListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = CleSerializer
+    filterset_fields = ["produit", "disponiblite"]
+    ordering_fields = ["produit", "disponiblite"]
+    ordering = ["produit"]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsVendeur()]
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return Cle.objects.all()
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Clés"],
+        summary="Récupère une clé",
+        description="Récupère les détails d'une clé spécifique.",
+    ),
+    update=extend_schema(
+        tags=["Clés"],
+        summary="Met à jour une clé",
+        description="Met à jour les détails d'une clé (réservé aux administrateurs).",
+    ),
+    destroy=extend_schema(
+        tags=["Clés"],
+        summary="Supprime une clé",
+        description="Supprime une clé (réservé aux administrateurs).",
+    ),
+)
+class RetrieveUpdateDestroyCleAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CleSerializer
+    lookup_field = "pk"
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsVendeur()]
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return Cle.objects.all()
+
+
+# Catégories
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Catégories"],
+        summary="Liste toutes les catégories",
+        description="Retourne une liste de toutes les catégories disponibles.",
+    ),
+    create=extend_schema(
+        tags=["Catégories"],
+        summary="Crée une nouvelle catégorie",
+        description="Crée une nouvelle catégorie (réservé aux administrateurs).",
+    ),
+)
+class CategorieListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = CategorieSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return Categorie.objects.all()
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Catégories"],
+        summary="Récupère une catégorie",
+        description="Récupère les détails d'une catégorie spécifique.",
+    ),
+    update=extend_schema(
+        tags=["Catégories"],
+        summary="Met à jour une catégorie",
+        description="Met à jour les détails d'une catégorie (réservé aux administrateurs).",
+    ),
+    destroy=extend_schema(
+        tags=["Catégories"],
+        summary="Supprime une catégorie",
+        description="Supprime une catégorie (réservé aux administrateurs).",
+    ),
+)
+class RetrieveUpdateDestroyCategoryAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdmin]
+    queryset = Categorie.objects.all()
+    serializer_class = CategorieSerializer
+    lookup_field = "pk"
 
 
 # Méthodes de paiement
@@ -300,6 +402,7 @@ class ActionCreateAPIView(APIView):
     def post(self, request: Request, *args, **kwargs) -> Response:
         action_data = request.data.get("action")
         type_action = action_data.get("type", "").upper()
+        print(type_action)
         produits_data = request.data.get("produits")
 
         if not action_data or not produits_data:

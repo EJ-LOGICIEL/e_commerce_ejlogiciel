@@ -28,6 +28,7 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
     """
     try:
         client = Utilisateur.objects.get(id=client_id)
+        print(client.email)
         action = Action.objects.get(id=action_id)
 
         # Déterminer le type d'action (achat ou devis)

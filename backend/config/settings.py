@@ -229,7 +229,7 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 
-# Configuration de drf-spectacular
+
 SPECTACULAR_SETTINGS = {
     "TITLE": "EJ Logiciel API",
     "DESCRIPTION": "API pour la gestion des produits, clés et ventes de logiciels",
@@ -250,8 +250,12 @@ SPECTACULAR_SETTINGS = {
     "TAGS": [
         {"name": "Authentication", "description": "Endpoints d'authentification"},
         {"name": "Produits", "description": "Gestion des produits"},
-        {"name": "Catégories", "description": "Gestion des catégories de produits"},
         {"name": "Clés", "description": "Gestion des clés d'activation"},
+        {"name": "Catégories", "description": "Gestion des catégories de produits"},
+        {
+            "name": "Methodes de paiement",
+            "description": "Gestion des méthodes de paiement",
+        },
         {"name": "Actions", "description": "Gestion des achats et devis"},
         {"name": "Utilisateurs", "description": "Gestion des utilisateurs"},
         {"name": "Statistiques", "description": "Statistiques et tableaux de bord"},
