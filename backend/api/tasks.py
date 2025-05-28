@@ -17,15 +17,6 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, max_retries=3, rate_limit="10/m")
 def envoyer_cles_email_async(self, client_id, action_id, cles_data):
-    """
-    Envoie un email contenant les clés d'activation au client pour un achat,
-    ou un devis pour une demande de devis.
-
-    Args:
-        client_id: ID de l'utilisateur client
-        action_id: ID de l'action (achat ou devis)
-        cles_data: Dictionnaire contenant les clés à envoyer (pour achat) ou les produits (pour devis)
-    """
     try:
         client = Utilisateur.objects.get(id=client_id)
         print(client.email)
@@ -34,26 +25,22 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
         # Déterminer le type d'action (achat ou devis)
         est_achat = action.type.upper() == "ACHAT"
 
-        # Générer le PDF (facture ou devis)
         buffer = io.BytesIO()
         p = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
 
         # p.drawImage("ej", 1 * cm, height - 3 * cm, width=5 * cm, height=2 * cm)
 
-        # Titre du document
         titre = "FACTURE" if est_achat else "DEVIS"
         p.setFont("Helvetica-Bold", 18)
         p.drawString(width / 2 - 40, height - 2 * cm, f"{titre} #{action.code_action}")
 
-        # Informations de l'entreprise
         p.setFont("Helvetica", 10)
         p.drawString(1 * cm, height - 3 * cm, "EJ Logiciel")
         p.drawString(1 * cm, height - 3.5 * cm, "Antananarivo, Madagascar")
         p.drawString(1 * cm, height - 4 * cm, "Tel: +261 34 12 345 67")
         p.drawString(1 * cm, height - 4.5 * cm, "Email: romeomanoela123@gmail.com")
 
-        # Date et numéro de document
         p.drawString(
             width - 6 * cm,
             height - 3 * cm,
@@ -61,7 +48,6 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
         )
         p.drawString(width - 6 * cm, height - 3.5 * cm, f"Réf: {action.code_action}")
 
-        # Informations client
         p.setFont("Helvetica-Bold", 12)
         p.drawString(1 * cm, height - 6 * cm, "INFORMATIONS CLIENT")
         p.setFont("Helvetica", 10)
@@ -70,18 +56,15 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
         p.drawString(1 * cm, height - 7.5 * cm, f"Téléphone: {client.numero_telephone}")
         p.drawString(1 * cm, height - 8 * cm, f"Adresse: {client.adresse}")
 
-        # Tableau des produits
         p.setFont("Helvetica-Bold", 12)
         p.drawString(1 * cm, height - 9.5 * cm, "DÉTAILS DES PRODUITS")
 
-        # En-têtes du tableau
         p.setFont("Helvetica-Bold", 10)
         p.drawString(1 * cm, height - 10.5 * cm, "Produit")
         p.drawString(10 * cm, height - 10.5 * cm, "Quantité")
         p.drawString(13 * cm, height - 10.5 * cm, "Prix")
         p.drawString(16 * cm, height - 10.5 * cm, "Total")
 
-        # Ligne de séparation
         p.setStrokeColor(colors.black)
         p.line(1 * cm, height - 11 * cm, width - 1 * cm, height - 11 * cm)
 
