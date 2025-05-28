@@ -463,7 +463,6 @@ class ActionCreateAPIView(APIView):
         # Préparer les données pour l'email
         cles_selectionnees = {}
 
-        # Pour les achats, attribuer des clés
         if type_action == "ACHAT":
             for item in produits_data:
                 produit_id = item["produit"]
@@ -503,17 +502,15 @@ class ActionCreateAPIView(APIView):
                             "validite": cle.validite,
                         }
                     )
-        # Pour les devis, juste lister les produits sans attribuer de clés
+
         else:
             for item in produits_data:
                 produit_id = item["produit"]
                 produit = produits_map[str(produit_id)]
                 quantite = item.get("quantite", 1)
 
-                # Créer une liste vide pour chaque produit
                 cles_selectionnees[produit.nom] = []
 
-                # Ajouter des entrées factices pour représenter la quantité
                 for _ in range(quantite):
                     cles_selectionnees[produit.nom].append(
                         {
