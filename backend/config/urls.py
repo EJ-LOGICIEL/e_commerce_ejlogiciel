@@ -36,7 +36,6 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
-    # Interface ReDoc (alternative à Swagger)
     path(
         "api/redoc/",
         SpectacularRedocView.as_view(url_name="schema"),

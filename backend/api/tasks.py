@@ -39,8 +39,7 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
         p = canvas.Canvas(buffer, pagesize=A4)
         width, height = A4
 
-        # En-tête avec logo (si disponible)
-        # p.drawImage("path/to/logo.png", 1*cm, height-3*cm, width=5*cm, height=2*cm)
+        # p.drawImage("ej", 1 * cm, height - 3 * cm, width=5 * cm, height=2 * cm)
 
         # Titre du document
         titre = "FACTURE" if est_achat else "DEVIS"
@@ -52,7 +51,7 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
         p.drawString(1 * cm, height - 3 * cm, "EJ Logiciel")
         p.drawString(1 * cm, height - 3.5 * cm, "Antananarivo, Madagascar")
         p.drawString(1 * cm, height - 4 * cm, "Tel: +261 34 12 345 67")
-        p.drawString(1 * cm, height - 4.5 * cm, "Email: contact@ejlogiciel.com")
+        p.drawString(1 * cm, height - 4.5 * cm, "Email: romeomanoela123@gmail.com")
 
         # Date et numéro de document
         p.drawString(
