@@ -1,22 +1,29 @@
 FROM python:slim-bullseye
 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Installer uv et les dépendances système
+RUN apt-get update && apt-get install -y \
+    build-essential curl libpq-dev \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ajouter le dossier de l'application
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# Copier les fichiers de configuration uv
+COPY . .
 
-# Mise à jour de pip et installation des dépendances en une seule commande
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /root/.cache
+# Installer uv et les dépendances Python
 
-# Copie des fichiers de l'application
-COPY . /app/
+RUN pip install uv
 
-# Création du répertoire staticfiles
-RUN mkdir -p /app/staticfiles
+# Installer les dépendances depuis uv.lock
+RUN uv sync
 
-EXPOSE 8000
+# Exposer le port 8001
+EXPOSE 8001
 
-CMD [""]
+# Lancer Django avec gunicorn (ou autre)
+CMD ["python", "manage.py", "runserver"]
