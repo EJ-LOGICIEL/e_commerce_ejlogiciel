@@ -599,7 +599,6 @@ class DashboardStatsAPIView(APIView):
         # Date d'il y a 30 jours
         thirty_days_ago = today - timedelta(days=30)
 
-        # Statistiques globales
         total_users = Utilisateur.objects.count()
         total_products = Produit.objects.count()
         total_actions = Action.objects.count()
