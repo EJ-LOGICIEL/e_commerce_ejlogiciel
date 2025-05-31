@@ -21,7 +21,7 @@ function Header(): React.ReactElement {
       </h1>
 
       <nav className='hidden space-x-2 md:block'>
-        <Link href='/frontend/public' className={navClass}>
+        <Link href='/' className={navClass}>
           Accueil
         </Link>
         <Link href='/produit' className={navClass}>
