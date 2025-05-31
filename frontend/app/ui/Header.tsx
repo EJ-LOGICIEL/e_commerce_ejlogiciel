@@ -1,7 +1,7 @@
 import Img from 'next/image';
 import Link from 'next/link';
 import React from 'react';
-import { FiShoppingCart } from 'react-icons/fi';
+import {FiShoppingCart} from 'react-icons/fi';
 
 function Header(): React.ReactElement {
   const navClass: string =
@@ -13,7 +13,7 @@ function Header(): React.ReactElement {
         <Img
           src='/ej.jpg'
           alt='logo-ej-logiciel'
-          width={55}
+          width={50}
           height={55}
           className='inline rounded-4xl'
         />

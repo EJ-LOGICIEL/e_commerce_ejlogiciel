@@ -2,6 +2,7 @@ import './globals.css';
 import React from 'react';
 import Header from '@/app/ui/Header';
 import Footer from '@/app/ui/Footer';
+import Contact from "@/app/ui/Contact";
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
           </div>
           <div className='overflow-y-scroll'>
             <main>{children}</main>
+            <Contact />
           </div>
           <div className='fixed right-0 bottom-0 left-0 block md:hidden'>
             <Footer />
