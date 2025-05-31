@@ -101,6 +101,14 @@ class CustomTokenRefreshView(TokenRefreshView):
         return res
 
 
+class UserInfoAPIView(APIView):
+    """Endpoint pour obtenir les informations de l'utilisateur connecté."""
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+
 @extend_schema(
     tags=["Authentication"],
     summary="Déconnexion",
