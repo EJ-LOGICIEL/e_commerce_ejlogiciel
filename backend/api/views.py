@@ -12,6 +12,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .custom_permissions import IsAdmin, IsAdminOrVendeur, IsVendeur
@@ -45,10 +46,32 @@ from .tasks import envoyer_cles_email_async, logger
     description="Permet à un utilisateur de s'inscrire en tant que client.",
     responses={201: UserSerializer},
 )
-class ClientSignUpAPIView(generics.CreateAPIView):
+class UserSignUpAPIView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     queryset = Utilisateur.objects.all()
     serializer_class = UserSerializer
+
+    def post(self, request, *args, **kwargs):
+        res: Response = super().post(request, *args, **kwargs)
+        if res.status_code == 201:
+            user = Utilisateur.objects.get(id=res.data["id"])
+            refresh = RefreshToken.for_user(user)
+            res.set_cookie(
+                key="refresh_token",
+                value=str(refresh),
+                httponly=True,
+                max_age=3600 * 24 * 7,
+                secure=True,
+                samesite="Lax",
+            )
+            access_token = str(refresh.access_token)
+            res = Response(
+                {
+                    "token": access_token,
+                    "user": UserSerializer(user).data
+                }
+            )
+        return res
 
 
 @extend_schema(
@@ -61,16 +84,40 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Endpoint pour obtenir un token d'authentification JWT."""
 
     def post(self, request: Request, *args, **kwargs) -> Response:
-        res: Response = super().post(request, *args, **kwargs)
-        refresh_token = res.data.pop("refresh")
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.user
+        access_token = serializer.validated_data["access"]
+        refresh_token = serializer.validated_data["refresh"]
+
+        user_data = {
+            "id": user.id,
+            "username": user.username,
+            "nom_complet": user.nom_complet,
+            "role": user.role,
+            "numero_telephone": user.numero_telephone,
+            "adresse": user.adresse,
+            "email": user.email,
+            "code_utilisateur": user.code_utilisateur,
+            "nif": user.nif,
+            "stats": user.stats,
+            "rcs": user.rcs,
+        }
+
+        res = Response({
+            "token": access_token,
+            "user": user_data,
+        })
 
         res.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,
-            max_age=36000 * 24 * 7,
+            max_age=3600 * 24 * 7,  # 7 jours
             secure=True,
+            samesite="Lax",
         )
+
         return res
 
 

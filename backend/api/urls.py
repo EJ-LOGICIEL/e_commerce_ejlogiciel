@@ -1,7 +1,6 @@
 from django.urls import path
 
 from .views import (
-    ClientSignUpAPIView,
     CustomTokenObtainPairView,
     CustomTokenRefreshView,
     LogoutView,
@@ -16,11 +15,12 @@ from .views import (
     ActionCreateAPIView,
     DashboardStatsAPIView,
     UserInfoAPIView,
+    UserSignUpAPIView,
 )
 
 urlpatterns = [
     # Authentication
-    path("signup/", ClientSignUpAPIView.as_view(), name="signup"),
+    path("signup/", UserSignUpAPIView.as_view(), name="signup"),
     path("token/", CustomTokenObtainPairView.as_view(), name="login"),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
     path("me/", UserInfoAPIView.as_view(), name="user-info"),
