@@ -23,7 +23,7 @@ urlpatterns = [
     path("signup/", ClientSignUpAPIView.as_view(), name="signup"),
     path("token/", CustomTokenObtainPairView.as_view(), name="login"),
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
-    path("me", UserInfoAPIView.as_view(), name="user-info"),
+    path("me/", UserInfoAPIView.as_view(), name="user-info"),
     path("logout/", LogoutView.as_view(), name="logout"),
     # Produits
     path("produits/", ProduitListCreateAPIView.as_view(), name="produit-list-create"),
