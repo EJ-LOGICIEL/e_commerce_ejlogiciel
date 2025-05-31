@@ -1,8 +1,8 @@
 import './globals.css';
 import React from 'react';
-import Header from '@/app/ui/Header';
-import Footer from '@/app/ui/Footer';
-import Contact from "@/app/ui/Contact";
+import Header from '@/ui/Header';
+import Footer from '@/ui/Footer';
+import Contact from "@/ui/Contact";
 
 export default function RootLayout({
   children,

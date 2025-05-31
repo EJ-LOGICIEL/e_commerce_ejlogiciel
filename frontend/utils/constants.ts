@@ -1,0 +1,1 @@
+export const ACCESS_TOKEN: string = '_xtr_tk_dj'

@@ -5,7 +5,7 @@ import {RiAccountCircle2Line} from 'react-icons/ri';
 function Footer() {
   return (
     <div className={'flex justify-around border-t bg-[#061e53] text-white border-gray-200 p-3'}>
-      <Link href='/'>
+      <Link href='/frontend/public'>
         <FiHome className='mr-2 inline-block' />
         Accueil
       </Link>

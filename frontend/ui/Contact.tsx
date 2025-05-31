@@ -23,9 +23,9 @@ export default function Contact() {
         <div>
           <h3 className="font-semibold text-[#061e53] mb-4">Menu</h3>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/" className="hover:text-[#061e53]">Accueil</Link></li>
+            <li><Link href="/frontend/public" className="hover:text-[#061e53]">Accueil</Link></li>
             <li><Link href="/produits" className="hover:text-[#061e53]">Produits</Link></li>
-            <li><a href="/compte" className="hover:text-[#061e53]">compte</a></li>
+            <li><a href="/compte" className="hover:text-[#061e53]">Mon compte</a></li>
           </ul>
         </div>
 
