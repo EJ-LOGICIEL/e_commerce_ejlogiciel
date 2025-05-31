@@ -3,12 +3,12 @@ import React from 'react';
 import Link from 'next/link';
 
 const navItems = [
-  { name: 'Dashboard', href: '/admin', icon: '📊' },
-  { name: 'Products', href: '/admin/products', icon: '📦' },
-  { name: 'Orders', href: '/admin/orders', icon: '🛒' },
-  { name: 'Customers', href: '/admin/customers', icon: '👥' },
-  { name: 'Sales', href: '/admin/sales', icon: '💰' },
-  { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
+  { name: 'Tableau de Bord', href: '/admin', icon: '📊' },
+  { name: 'Produits', href: '/admin/produits', icon: '📦' },
+  { name: 'Commandes', href: '/admin/panier', icon: '🛒' },
+  { name: 'Clients', href: '/admin/clients', icon: '👥' },
+  { name: 'Ventes', href: '/admin/ventes', icon: '💰' },
+  { name: 'Paramètres', href: '/admin/parametres', icon: '⚙️' },
 ];
 
 export default function Layout({
@@ -21,7 +21,7 @@ export default function Layout({
         {/* Sidebar */}
         <div className='w-64 bg-gray-800 text-white'>
           <div className='p-4'>
-            <h1 className='text-2xl font-bold'>Admin Panel</h1>
+            <h1 className='text-2xl font-bold'>Panneau Administration</h1>
           </div>
           <nav className='mt-6'>
             <ul>
@@ -38,7 +38,7 @@ export default function Layout({
           <div className='absolute bottom-0 w-64 p-4 border-t border-gray-700'>
             <Link href="/" className='flex items-center text-gray-300 hover:text-white'>
               <span className='mr-2'>🏠</span>
-              <span>Back to Site</span>
+              <span>Retour au Site</span>
             </Link>
           </div>
         </div>
@@ -47,14 +47,14 @@ export default function Layout({
         <div className='flex-1 overflow-y-auto'>
           <header className='bg-white shadow-sm'>
             <div className='px-6 py-4 flex justify-between items-center'>
-              <h2 className='text-xl font-semibold text-gray-800'>Admin</h2>
+              <h2 className='text-xl font-semibold text-gray-800'>Administration</h2>
               <div className='flex items-center'>
                 <button className='p-2 rounded-full hover:bg-gray-100 mr-2'>
                   <span>🔔</span>
                 </button>
                 <div className='relative'>
                   <button className='flex items-center text-sm font-medium text-gray-700 hover:text-gray-900'>
-                    <span className='mr-2'>Admin User</span>
+                    <span className='mr-2'>Utilisateur Admin</span>
                     <span className='h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center'>
                     👤
                   </span>
