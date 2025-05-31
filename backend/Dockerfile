@@ -15,10 +15,6 @@ WORKDIR /app
 # Copier les fichiers de configuration uv
 COPY . .
 
-# Installer uv et les dépendances Python
-
-RUN pip install uv
-
 # Installer les dépendances depuis uv.lock
 RUN uv sync
 
