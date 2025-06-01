@@ -10,8 +10,14 @@ class Utilisateur(AbstractUser):
         ("admin", "Admin"),
     ]
 
+    CHOIX_TYPE = [
+        ("particulier", "Particulier"),
+        ("entreprise", "Entreprise"),
+    ]
+
     nom_complet = models.CharField(max_length=30)
     role = models.CharField(max_length=100, choices=CHOIX_ROLE, default="client")
+    type = models.CharField(max_length=20, choices=CHOIX_TYPE, default="particulier")
     numero_telephone = models.CharField(max_length=15)
     adresse = models.CharField(max_length=100)
     code_utilisateur = models.CharField(max_length=50, null=True, blank=True)
