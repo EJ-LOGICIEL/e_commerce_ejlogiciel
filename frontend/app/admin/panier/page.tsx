@@ -1,340 +1,250 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '@/lib/apis';
+import { useRouter } from 'next/navigation';
 
-interface Commande {
+interface Produit {
   id: number;
-  client: string;
-  date_action?: string;
+  nom: string;
+  description: string;
   prix: number;
-  statut?: string;
-  methode_paiement?: string;
-  produits?: Array<{ nom: string; quantite: number; prix: number }>;
+  categorie?: number;
 }
 
-export default function OrdersPage() {
-  const [commandes, setCommandes] = useState<Commande[]>([]);
+interface PanierItem {
+  produit: Produit;
+  quantite: number;
+}
+
+export default function PanierPage() {
+  const [panier, setPanier] = useState<PanierItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingCommande, setEditingCommande] = useState<Commande | null>(null);
-  const [detailCommande, setDetailCommande] = useState<Commande | null>(null);
-  const [form, setForm] = useState<Partial<Commande>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [methodePaiement, setMethodePaiement] = useState('CB');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
 
-  const fetchCommandes = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await api.get('/api/actions/?type=ACHAT');
-      setCommandes(res.data);
-    } catch {
-      setError('Erreur lors du chargement des commandes.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Charger le panier depuis le localStorage
   useEffect(() => {
-    fetchCommandes();
+    const panierSauvegarde = localStorage.getItem('panier');
+    if (panierSauvegarde) {
+      setPanier(JSON.parse(panierSauvegarde));
+    }
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Sauvegarder le panier dans localStorage quand il change
+  useEffect(() => {
+    localStorage.setItem('panier', JSON.stringify(panier));
+  }, [panier]);
+
+  // Calculer le total du panier
+  const calculerTotal = () => {
+    return panier.reduce((total, item) => total + (item.produit.prix * item.quantite), 0);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // Mettre à jour la quantité d'un produit
+  const updateQuantite = (id: number, nouvelleQuantite: number) => {
+    if (nouvelleQuantite < 1) return;
+
+    setPanier(panierActuel =>
+      panierActuel.map(item =>
+        item.produit.id === id
+          ? { ...item, quantite: nouvelleQuantite }
+          : item
+      )
+    );
+  };
+
+  // Supprimer un produit du panier
+  const supprimerDuPanier = (id: number) => {
+    setPanier(panierActuel => panierActuel.filter(item => item.produit.id !== id));
+  };
+
+  // Vider le panier
+  const viderPanier = () => {
+    if (confirm('Êtes-vous sûr de vouloir vider votre panier ?')) {
+      setPanier([]);
+    }
+  };
+
+  // Procéder à l'achat
+  const procederAchat = async () => {
+    if (panier.length === 0) {
+      setError("Votre panier est vide");
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+    setSuccess(null);
+
     try {
-      if (editingCommande) {
-        await api.put(`/api/actions/${editingCommande.id}/`, form);
-      } else {
-        await api.post('/api/actions/', { ...form, type: 'ACHAT' });
+      // Création des actions pour chaque produit
+      const achats = panier.map(item => ({
+        produit: item.produit.id,
+        quantite: item.quantite,
+        prix: item.produit.prix * item.quantite,
+        type: 'ACHAT',
+        methode_paiement: methodePaiement
+      }));
+
+      // Envoi des achats au serveur
+      for (const achat of achats) {
+        await api.post('/api/actions/', achat);
       }
-      setForm({});
-      setEditingCommande(null);
-      setShowForm(false);
-      fetchCommandes();
-    } catch {
-      setError("Erreur lors de l'enregistrement de la commande.");
+
+      setSuccess("Achat effectué avec succès !");
+      setPanier([]);
+
+      setTimeout(() => {
+        router.push('/admin/ventes');
+      }, 2000);
+    } catch (err: any) {
+      console.error('Erreur lors de l\'achat', err);
+      setError(err.response?.data?.detail || "Une erreur est survenue lors de l'achat");
     } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleEdit = (commande: Commande) => {
-    setEditingCommande(commande);
-    setForm({
-      client: commande.client,
-      prix: commande.prix,
-      statut: commande.statut,
-      methode_paiement: commande.methode_paiement
-    });
-    setShowForm(true);
-  };
-
-  const handleViewDetail = (commande: Commande) => {
-    setDetailCommande(commande);
-    setShowDetail(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('Supprimer cette commande ?')) return;
-    setIsSubmitting(true);
-    try {
-      await api.delete(`/api/actions/${id}/`);
-      fetchCommandes();
-    } catch {
-      setError("Erreur lors de la suppression de la commande.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const getStatusColor = (statut?: string) => {
-    switch(statut) {
-      case 'LIVRÉ': return 'bg-green-100 text-green-800';
-      case 'EN_ATTENTE': return 'bg-yellow-100 text-yellow-800';
-      case 'ANNULÉ': return 'bg-red-100 text-red-800';
-      default: return 'bg-blue-100 text-blue-800';
+      setIsProcessing(false);
     }
   };
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-purple-800 mb-1">Gestion des Commandes</h2>
-          <p className="text-gray-600">Visualisez, ajoutez, modifiez ou supprimez les commandes de vos clients.</p>
-        </div>
-        <button
-          className="bg-gradient-to-r from-purple-600 to-purple-400 hover:from-purple-700 hover:to-purple-500 text-white font-semibold px-6 py-2 rounded-lg shadow transition"
-          onClick={() => { setShowForm(true); setEditingCommande(null); setForm({}); }}
-        >
-          + Nouvelle commande
-        </button>
-      </div>
-      {error && <div className="text-red-500 mb-2">{error}</div>}
+      <h2 className="text-3xl font-extrabold text-blue-800 mb-1">Votre Panier</h2>
+      <p className="text-gray-600 mb-6">Gérez vos produits et finalisez votre commande</p>
 
-      {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-purple-100 animate-fade-in">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                <input
-                  type="text"
-                  name="client"
-                  placeholder="Nom du client"
-                  value={form.client || ''}
-                  onChange={handleChange}
-                  className="border border-purple-200 p-2 rounded w-full focus:ring-2 focus:ring-purple-400"
-                  required
-                />
-              </div>
-              <div className="w-full md:w-1/4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prix Total (€)</label>
-                <input
-                  type="number"
-                  name="prix"
-                  placeholder="Prix"
-                  value={form.prix || ''}
-                  onChange={handleChange}
-                  className="border border-purple-200 p-2 rounded w-full focus:ring-2 focus:ring-purple-400"
-                  required
-                />
-              </div>
-              <div className="w-full md:w-1/4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
-                <select
-                  name="statut"
-                  value={form.statut || ''}
-                  onChange={handleChange}
-                  className="border border-purple-200 p-2 rounded w-full focus:ring-2 focus:ring-purple-400"
-                  required
-                >
-                  <option value="">Sélectionner un statut</option>
-                  <option value="LIVRÉ">Livré</option>
-                  <option value="EN_ATTENTE">En attente</option>
-                  <option value="ANNULÉ">Annulé</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Méthode de Paiement</label>
-                <select
-                  name="methode_paiement"
-                  value={form.methode_paiement || ''}
-                  onChange={handleChange}
-                  className="border border-purple-200 p-2 rounded w-full focus:ring-2 focus:ring-purple-400"
-                  required
-                >
-                  <option value="">Sélectionner une méthode</option>
-                  <option value="1">Carte bancaire</option>
-                  <option value="2">Virement</option>
-                  <option value="3">PayPal</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <button
-                type="submit"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow disabled:opacity-50"
-                disabled={isSubmitting}
-              >
-                {editingCommande ? 'Modifier' : 'Ajouter'}
-              </button>
-              <button
-                type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow"
-                onClick={() => { setShowForm(false); setEditingCommande(null); setForm({}); }}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
+      {error && (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
+          <p className="font-bold">Erreur</p>
+          <p>{error}</p>
         </div>
       )}
 
-      {showDetail && detailCommande && (
-        <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-purple-100 animate-fade-in">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-purple-800">Détails de la commande #{detailCommande.id}</h3>
-            <button
-              className="text-gray-500 hover:text-gray-700"
-              onClick={() => setShowDetail(false)}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <p className="text-sm text-gray-500">Client</p>
-              <p className="font-semibold">{detailCommande.client}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Date</p>
-              <p className="font-semibold">{detailCommande.date_action ? new Date(detailCommande.date_action).toLocaleDateString() : '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Total</p>
-              <p className="font-semibold text-purple-700">{detailCommande.prix} €</p>
-            </div>
-          </div>
-          <div className="mt-4">
-            <h4 className="text-lg font-semibold mb-2">Produits</h4>
-            {detailCommande.produits && detailCommande.produits.length > 0 ? (
+      {success && (
+        <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded" role="alert">
+          <p className="font-bold">Succès</p>
+          <p>{success}</p>
+        </div>
+      )}
+
+      {panier.length === 0 ? (
+        <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+          <p className="text-gray-500 mb-4">Votre panier est vide</p>
+          <button
+            onClick={() => router.push('/accueil')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+          >
+            Découvrir nos produits
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-purple-50">
-                  <tr>
-                    <th className="p-2">Produit</th>
-                    <th className="p-2">Quantité</th>
-                    <th className="p-2">Prix</th>
+                <thead>
+                  <tr className="bg-blue-50">
+                    <th className="p-3 rounded-l-lg">Produit</th>
+                    <th className="p-3">Prix unitaire</th>
+                    <th className="p-3">Quantité</th>
+                    <th className="p-3">Sous-total</th>
+                    <th className="p-3 rounded-r-lg">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {detailCommande.produits.map((produit, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-2">{produit.nom}</td>
-                      <td className="p-2">{produit.quantite}</td>
-                      <td className="p-2">{produit.prix} €</td>
+                <tbody className="divide-y divide-gray-200">
+                  {panier.map((item) => (
+                    <tr key={item.produit.id} className="hover:bg-gray-50">
+                      <td className="p-3">
+                        <div>
+                          <p className="font-semibold text-blue-900">{item.produit.nom}</p>
+                          <p className="text-sm text-gray-500">{item.produit.description}</p>
+                        </div>
+                      </td>
+                      <td className="p-3 text-gray-700">{item.produit.prix.toFixed(2)} €</td>
+                      <td className="p-3">
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => updateQuantite(item.produit.id, item.quantite - 1)}
+                            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-l"
+                          >
+                            -
+                          </button>
+                          <span className="px-4 py-1 bg-gray-100">{item.quantite}</span>
+                          <button
+                            onClick={() => updateQuantite(item.produit.id, item.quantite + 1)}
+                            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-r"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3 font-bold text-blue-700">{(item.produit.prix * item.quantite).toFixed(2)} €</td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => supprimerDuPanier(item.produit.id)}
+                          className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded shadow"
+                        >
+                          Supprimer
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            ) : (
-              <p className="text-gray-500">Aucun détail de produit disponible</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <span className="loader"></span>
-            <span className="ml-2 text-purple-700">Chargement...</span>
-          </div>
-        ) : commandes.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">Aucune commande pour le moment.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-separate border-spacing-y-2">
-              <thead>
-                <tr className="bg-purple-50">
-                  <th className="p-3 rounded-l-lg">Commande #</th>
-                  <th className="p-3">Client</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3">Total</th>
-                  <th className="p-3">Statut</th>
-                  <th className="p-3 rounded-r-lg">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {commandes.map((commande) => (
-                  <tr key={commande.id} className="bg-white shadow-sm hover:shadow-md transition">
-                    <td className="p-3 font-semibold text-purple-900">#{commande.id}</td>
-                    <td className="p-3">{commande.client}</td>
-                    <td className="p-3">{commande.date_action ? new Date(commande.date_action).toLocaleDateString() : '-'}</td>
-                    <td className="p-3 font-bold text-purple-700">{commande.prix} €</td>
+                <tfoot>
+                  <tr className="bg-gray-50">
+                    <td colSpan={3} className="p-3 text-right font-semibold">Total</td>
+                    <td className="p-3 font-extrabold text-blue-800 text-xl">{calculerTotal().toFixed(2)} €</td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(commande.statut)}`}>
-                        {commande.statut || 'En traitement'}
-                      </span>
-                    </td>
-                    <td className="p-3 flex gap-2">
                       <button
-                        className="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1 rounded shadow"
-                        onClick={() => handleViewDetail(commande)}
+                        onClick={viderPanier}
+                        className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-1 rounded shadow"
                       >
-                        Détails
-                      </button>
-                      <button
-                        className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded shadow"
-                        onClick={() => handleEdit(commande)}
-                        disabled={isSubmitting}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded shadow"
-                        onClick={() => handleDelete(commande.id)}
-                        disabled={isSubmitting}
-                      >
-                        Supprimer
+                        Vider le panier
                       </button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </tfoot>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
-      <style jsx>{`
-        .loader {
-          border: 4px solid #e5e7eb;
-          border-top: 4px solid #8b5cf6;
-          border-radius: 50%;
-          width: 32px;
-          height: 32px;
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-in;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+
+          <div className="bg-white p-6 rounded-xl shadow-lg mb-6">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Finaliser votre commande</h3>
+
+            <div className="mb-4">
+              <label htmlFor="methodePaiement" className="block text-sm font-medium text-gray-700 mb-1">
+                Méthode de paiement
+              </label>
+              <select
+                id="methodePaiement"
+                value={methodePaiement}
+                onChange={(e) => setMethodePaiement(e.target.value)}
+                className="border border-blue-200 p-2 rounded w-full md:w-1/3 focus:ring-2 focus:ring-blue-400"
+              >
+                <option value="CB">Carte bancaire</option>
+                <option value="VIREMENT">Virement bancaire</option>
+                <option value="PAYPAL">PayPal</option>
+                <option value="CHEQUE">Chèque</option>
+              </select>
+            </div>
+
+            <button
+              onClick={procederAchat}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow disabled:opacity-50 flex items-center"
+            >
+              {isProcessing ? (
+                <>
+                  <span className="inline-block w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  Traitement...
+                </>
+              ) : (
+                'Procéder à l\'achat'
+              )}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
