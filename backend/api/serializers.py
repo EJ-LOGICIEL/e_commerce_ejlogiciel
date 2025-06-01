@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
             "nom_complet",
             "email",
             "password",
+            "type",
             "role",
             "numero_telephone",
             "adresse",

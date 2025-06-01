@@ -65,12 +65,7 @@ class UserSignUpAPIView(generics.CreateAPIView):
                 samesite="Lax",
             )
             access_token = str(refresh.access_token)
-            res = Response(
-                {
-                    "token": access_token,
-                    "user": UserSerializer(user).data
-                }
-            )
+            res = Response({"token": access_token, "user": UserSerializer(user).data})
         return res
 
 
@@ -95,6 +90,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             "username": user.username,
             "nom_complet": user.nom_complet,
             "role": user.role,
+            "type": user.type,
             "numero_telephone": user.numero_telephone,
             "adresse": user.adresse,
             "email": user.email,
@@ -104,10 +100,12 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             "rcs": user.rcs,
         }
 
-        res = Response({
-            "token": access_token,
-            "user": user_data,
-        })
+        res = Response(
+            {
+                "token": access_token,
+                "user": user_data,
+            }
+        )
 
         res.set_cookie(
             key="refresh_token",

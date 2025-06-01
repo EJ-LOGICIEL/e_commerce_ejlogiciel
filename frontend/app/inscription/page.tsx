@@ -1,14 +1,15 @@
 'use client';
 
 import React, {useState} from 'react';
-import {authenticate} from '@/lib/auth';
 import {UserState} from '@/utils/types';
 import Link from "next/link";
+import {authenticate} from "@/lib/auth";
 
 const initialRegisterData: Partial<UserState> = {
     username: '',
     nom_complet: '',
     role: 'client',
+    type: 'particulier',
     numero_telephone: '',
     adresse: '',
     email: '',
@@ -22,7 +23,6 @@ const initialRegisterData: Partial<UserState> = {
 export default function AuthPage() {
     const [registerData, setRegisterData] = useState(initialRegisterData);
     const [error, setError] = useState<string | null>(null);
-    const [type_client, setType_client] = useState('particulier');
     const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const {name, value} = e.target;
         setRegisterData(prev => ({...prev, [name]: value}));
@@ -34,6 +34,7 @@ export default function AuthPage() {
         setError(null);
         const res: true | null = await authenticate(registerData as UserState, 'signup');
         if (!res) setError('Échec de l\'inscription, ressayez plus tard');
+        setRegisterData(initialRegisterData);
     };
 
     return (
@@ -49,9 +50,7 @@ export default function AuthPage() {
                            onChange={handleRegisterChange} className="input"/>
                     <input type="text" name="nom_complet" placeholder="Nom complet" required
                            onChange={handleRegisterChange} className="input"/>
-                    <select name="type" value={type_client} onChange={(e) => {
-                        setType_client(e.target.value);
-                    }} className="input">
+                    <select name="type" onChange={handleRegisterChange} className="input">
                         <option value="particulier">Particulier</option>
                         <option value="entreprise">Entreprise</option>
                     </select>
@@ -64,7 +63,7 @@ export default function AuthPage() {
 
 
                     {/* Champs entreprise */}
-                    {type_client === 'entreprise' && (
+                    {registerData.type === 'entreprise' && (
                         <>
                             <input type="text" name="nif" placeholder="NIF" onChange={handleRegisterChange}
                                    className="input"/>
