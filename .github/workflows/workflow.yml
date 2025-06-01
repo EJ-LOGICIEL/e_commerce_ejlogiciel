@@ -1,0 +1,8 @@
+name: workflow.yml
+on:
+  push:
+    branches:
+      - update
+
+jobs:
+  build

@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
     extend_schema_view,
     OpenApiParameter,
 )
-from rest_framework import generics
+from rest_framework import generics, permissions
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -632,3 +632,15 @@ class DashboardStatsAPIView(APIView):
                 "top_clients": top_clients,
             }
         )
+
+
+class ClientListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Utilisateur.objects.filter(role="client")
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+class ClientRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Utilisateur.objects.filter(role="client")
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
+

@@ -15,6 +15,8 @@ from .views import (
     RetrieveUpdateDestroyCleAPIView,
     ActionCreateAPIView,
     DashboardStatsAPIView,
+    ClientListCreateAPIView,
+    ClientRetrieveUpdateDestroyAPIView,
 )
 
 urlpatterns = [
@@ -61,4 +63,7 @@ urlpatterns = [
     path("actions/", ActionCreateAPIView.as_view(), name="action-create"),
     # stats
     path("stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
+    # Clients (CRUD)
+    path("clients/", ClientListCreateAPIView.as_view(), name="client-list-create"),
+    path("clients/<int:pk>/", ClientRetrieveUpdateDestroyAPIView.as_view(), name="client-detail"),
 ]
