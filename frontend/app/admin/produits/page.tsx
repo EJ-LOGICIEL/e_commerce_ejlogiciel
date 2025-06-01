@@ -2,12 +2,22 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/lib/apis';
 
+interface Categorie {
+  id: number;
+  nom: string;
+  description?: string;
+}
+
 interface Produit {
   id: number;
   nom: string;
   description?: string;
   prix: number;
-  categorie?: number;
+  prix_min: number;
+  prix_max: number;
+  image: string;
+  categorie: number;
+  categorie_nom?: string;
 }
 
 interface Notification {
@@ -26,14 +36,32 @@ export default function ProductsPage() {
   const [showForm, setShowForm] = useState(false);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [categories, setCategories] = useState<Categorie[]>([]);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/api/categories/');
+      setCategories(res.data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des catégories:', err);
+    }
+  };
 
   const fetchProduits = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await api.get('/api/produits/');
-      setProduits(res.data);
-      setFilteredProduits(res.data);
+      // Enrichir les produits avec le nom de la catégorie
+      const produitsEnrichis = res.data.map((produit: Produit) => {
+        const categorie = categories.find(c => c.id === produit.categorie);
+        return {
+          ...produit,
+          categorie_nom: categorie ? categorie.nom : 'Catégorie inconnue'
+        };
+      });
+      setProduits(produitsEnrichis);
+      setFilteredProduits(produitsEnrichis);
     } catch (err) {
       setError('Erreur lors du chargement des produits.');
       showNotification('error', 'Erreur lors du chargement des produits.');
@@ -43,270 +71,301 @@ export default function ProductsPage() {
   };
 
   useEffect(() => {
-    fetchProduits();
+    fetchCategories().then(() => fetchProduits());
   }, []);
+
+  // Rafraîchir les produits quand les catégories changent
+  useEffect(() => {
+    if (categories.length > 0 && produits.length > 0) {
+      const produitsEnrichis = produits.map(produit => {
+        const categorie = categories.find(c => c.id === produit.categorie);
+        return {
+          ...produit,
+          categorie_nom: categorie ? categorie.nom : 'Catégorie inconnue'
+        };
+      });
+      setProduits(produitsEnrichis);
+      setFilteredProduits(produitsEnrichis);
+    }
+  }, [categories]);
 
   // Show notification
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
+    setTimeout(() => setNotification(null), 3000);
   };
 
-  // Handle search
+  // Filter produits based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredProduits(produits);
     } else {
       const lowercasedSearch = searchTerm.toLowerCase();
-      const filtered = produits.filter(produit =>
-        produit.nom.toLowerCase().includes(lowercasedSearch) ||
-        (produit.description && produit.description.toLowerCase().includes(lowercasedSearch)) ||
-        produit.prix.toString().includes(searchTerm)
+      const filtered = produits.filter(
+        produit =>
+          produit.nom.toLowerCase().includes(lowercasedSearch) ||
+          (produit.description && produit.description.toLowerCase().includes(lowercasedSearch)) ||
+          (produit.categorie_nom && produit.categorie_nom.toLowerCase().includes(lowercasedSearch))
       );
       setFilteredProduits(filtered);
     }
   }, [searchTerm, produits]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.name === 'prix' ? parseFloat(e.target.value) : e.target.value;
-    setForm({ ...form, [e.target.name]: value });
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm({
+      ...form,
+      [name]: name === 'prix' || name === 'prix_min' || name === 'prix_max' || name === 'categorie'
+        ? Number(value)
+        : value
+    });
   };
 
+  // Submit form to create or update a product
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       if (editingProduit) {
+        // Update existing product
         await api.put(`/api/produits/${editingProduit.id}/`, form);
-        showNotification('success', 'Produit modifié avec succès');
+        showNotification('success', 'Produit mis à jour avec succès');
       } else {
+        // Create new product
         await api.post('/api/produits/', form);
-        showNotification('success', 'Produit ajouté avec succès');
+        showNotification('success', 'Produit créé avec succès');
       }
+      setShowForm(false);
       setForm({});
       setEditingProduit(null);
-      setShowForm(false);
       fetchProduits();
     } catch (err) {
-      setError("Erreur lors de l'enregistrement du produit.");
-      showNotification('error', "Erreur lors de l'enregistrement du produit.");
+      showNotification('error', 'Erreur lors de l\'enregistrement du produit');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Delete a product
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) {
+      try {
+        await api.delete(`/api/produits/${id}/`);
+        showNotification('success', 'Produit supprimé avec succès');
+        fetchProduits();
+      } catch (err) {
+        showNotification('error', 'Erreur lors de la suppression du produit');
+      }
+    }
+  };
+
+  // Edit a product
   const handleEdit = (produit: Produit) => {
     setEditingProduit(produit);
-    setForm({ nom: produit.nom, description: produit.description, prix: produit.prix });
+    setForm(produit);
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Supprimer ce produit ?')) return;
-    setIsSubmitting(true);
-    try {
-      await api.delete(`/api/produits/${id}/`);
-      showNotification('success', 'Produit supprimé avec succès');
-      fetchProduits();
-    } catch (err) {
-      setError("Erreur lors de la suppression du produit.");
-      showNotification('error', "Erreur lors de la suppression du produit.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Gestion des Produits</h1>
+
+      {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg animate-fade-in ${
-          notification.type === 'success' ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 
-                                           'bg-red-100 text-red-800 border-l-4 border-red-500'
-        }`}>
-          <div className="flex items-center">
-            <span className={`mr-2 ${notification.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
-              {notification.type === 'success' ? '✓' : '✗'}
-            </span>
-            {notification.message}
-            <button
-              onClick={() => setNotification(null)}
-              className="ml-4 text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
+        <div className={`p-4 mb-4 rounded ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {notification.message}
         </div>
       )}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-blue-800 mb-1">Gestion des Produits</h2>
-          <p className="text-gray-600">Visualisez, ajoutez, modifiez ou supprimez les produits de votre boutique logicielle.</p>
-        </div>
+
+      {/* Search and Add button */}
+      <div className="flex justify-between mb-4">
+        <input
+          type="text"
+          placeholder="Rechercher un produit..."
+          className="p-2 border rounded w-2/3"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <button
-          className="bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white font-semibold px-6 py-2 rounded-lg shadow transition"
-          onClick={() => { setShowForm(true); setEditingProduit(null); setForm({}); }}
+          onClick={() => {
+            setEditingProduit(null);
+            setForm({});
+            setShowForm(true);
+          }}
+          className="bg-blue-500 text-white p-2 rounded"
         >
-          + Nouveau produit
+          Ajouter un produit
         </button>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher un produit..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-3 pl-10 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400"
-          />
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            🔍
-          </div>
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
-          <p className="font-bold">Erreur</p>
-          <p>{error}</p>
-        </div>
-      )}
-
+      {/* Product Form */}
       {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-blue-100 animate-fade-in">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nom du produit</label>
-                <input
-                  type="text"
-                  name="nom"
-                  placeholder="Nom du produit"
-                  value={form.nom || ''}
-                  onChange={handleChange}
-                  className="border border-blue-200 p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
-                  required
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <input
-                  type="text"
-                  name="description"
-                  placeholder="Description"
-                  value={form.description || ''}
-                  onChange={handleChange}
-                  className="border border-blue-200 p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prix (€)</label>
-                <input
-                  type="number"
-                  name="prix"
-                  step="0.01"
-                  placeholder="Prix (€)"
-                  value={form.prix || ''}
-                  onChange={handleChange}
-                  className="border border-blue-200 p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
-                  required
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow disabled:opacity-50 flex items-center"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <><span className="inline-block w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Traitement...</>
-                ) : (
-                  editingProduit ? 'Modifier' : 'Ajouter'
-                )}
-              </button>
-              <button
-                type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow"
-                onClick={() => { setShowForm(false); setEditingProduit(null); setForm({}); }}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
+        <form onSubmit={handleSubmit} className="mb-4 p-4 border rounded">
+          <h2 className="text-xl font-semibold mb-2">
+            {editingProduit ? 'Modifier le produit' : 'Ajouter un produit'}
+          </h2>
+
+          <div className="mb-2">
+            <label className="block mb-1">Nom</label>
+            <input
+              type="text"
+              name="nom"
+              value={form.nom || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Description</label>
+            <textarea
+              name="description"
+              value={form.description || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Catégorie</label>
+            <select
+              name="categorie"
+              value={form.categorie || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            >
+              <option value="">Sélectionner une catégorie</option>
+              {categories.map((categorie) => (
+                <option key={categorie.id} value={categorie.id}>
+                  {categorie.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Prix</label>
+            <input
+              type="number"
+              name="prix"
+              value={form.prix || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              step="0.01"
+              min="0"
+              required
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Prix minimum</label>
+            <input
+              type="number"
+              name="prix_min"
+              value={form.prix_min || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              step="0.01"
+              min="0"
+              required
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Prix maximum</label>
+            <input
+              type="number"
+              name="prix_max"
+              value={form.prix_max || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              step="0.01"
+              min="0"
+              required
+            />
+          </div>
+
+          <div className="mb-2">
+            <label className="block mb-1">Image (URL)</label>
+            <input
+              type="text"
+              name="image"
+              value={form.image || ''}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="bg-gray-300 p-2 rounded"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white p-2 rounded"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Products List */}
+      {isLoading ? (
+        <p className="text-center">Chargement des produits...</p>
+      ) : error ? (
+        <p className="text-red-500 text-center">{error}</p>
+      ) : filteredProduits.length === 0 ? (
+        <p className="text-center">Aucun produit trouvé</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Nom</th>
+                <th className="border p-2">Catégorie</th>
+                <th className="border p-2">Prix min</th>
+                <th className="border p-2">Prix</th>
+                <th className="border p-2">Prix max</th>
+                <th className="border p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProduits.map((produit) => (
+                <tr key={produit.id}>
+                  <td className="border p-2">{produit.nom}</td>
+                  <td className="border p-2">{produit.categorie_nom}</td>
+                  <td className="border p-2">{produit.prix_min}</td>
+                  <td className="border p-2">{produit.prix}</td>
+                  <td className="border p-2">{produit.prix_max}</td>
+                  <td className="border p-2">
+                    <button
+                      onClick={() => handleEdit(produit)}
+                      className="bg-yellow-500 text-white p-1 rounded mr-2"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => handleDelete(produit.id)}
+                      className="bg-red-500 text-white p-1 rounded"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="inline-block w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-2 text-blue-700">Chargement...</span>
-          </div>
-        ) : filteredProduits.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
-            {searchTerm ? 'Aucun produit ne correspond à votre recherche.' : 'Aucun produit pour le moment.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-separate border-spacing-y-2">
-              <thead>
-                <tr className="bg-blue-50">
-                  <th className="p-3 rounded-l-lg">Nom</th>
-                  <th className="p-3">Description</th>
-                  <th className="p-3">Prix (€)</th>
-                  <th className="p-3 rounded-r-lg">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProduits.map((produit) => (
-                  <tr key={produit.id} className="bg-white shadow-sm hover:shadow-md transition">
-                    <td className="p-3 font-semibold text-blue-900">{produit.nom}</td>
-                    <td className="p-3 text-gray-700">{produit.description || '-'}</td>
-                    <td className="p-3 text-blue-700 font-bold">{produit.prix} €</td>
-                    <td className="p-3 flex gap-2">
-                      <button
-                        className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded shadow"
-                        onClick={() => handleEdit(produit)}
-                        disabled={isSubmitting}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded shadow"
-                        onClick={() => handleDelete(produit.id)}
-                        disabled={isSubmitting}
-                      >
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <style jsx>{`
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

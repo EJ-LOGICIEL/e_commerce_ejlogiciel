@@ -38,6 +38,8 @@ services:
              gunicorn --bind 0.0.0.0:8001 --workers ${GUNICORN_WORKERS:-4} --timeout ${GUNICORN_TIMEOUT:-120} config.wsgi:application"
     env_file:
       - ./backend/.env.production
+    environment:
+      - ALLOWED_HOSTS=localhost,127.0.0.1,192.168.0.179,209.38.118.77,ejlogiciel.com
     ports:
       - "8001:8001"
     depends_on:

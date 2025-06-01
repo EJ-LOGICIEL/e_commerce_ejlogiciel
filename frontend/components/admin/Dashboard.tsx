@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import api from '@/lib/apis';
 import { ACCESS_TOKEN } from '@/utils/constants';
 
@@ -14,9 +15,19 @@ interface StatCard {
 interface RecentSale {
   id: number;
   client: string;
+  client_nom?: string;
   produit: string;
   prix: number;
   date: string;
+}
+
+interface AdminModule {
+  title: string;
+  description: string;
+  icon: string;
+  color: string;
+  path: string;
+  count?: number;
 }
 
 export default function Dashboard() {
@@ -27,6 +38,64 @@ export default function Dashboard() {
     { title: 'Revenu Mensuel', value: '0 €', icon: '📈', color: 'bg-yellow-100 text-yellow-800' },
   ]);
   const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
+  const [modules, setModules] = useState<AdminModule[]>([
+    {
+      title: 'Catégories',
+      description: 'Gérer les catégories de produits',
+      icon: '🏷️',
+      color: 'bg-purple-500',
+      path: '/admin/categories',
+      count: 0
+    },
+    {
+      title: 'Produits',
+      description: 'Gérer les produits du catalogue',
+      icon: '📦',
+      color: 'bg-green-500',
+      path: '/admin/produits',
+      count: 0
+    },
+    {
+      title: 'Clients',
+      description: 'Gérer les utilisateurs et clients',
+      icon: '👥',
+      color: 'bg-blue-500',
+      path: '/admin/clients',
+      count: 0
+    },
+    {
+      title: 'Clés',
+      description: 'Gérer les clés de produits',
+      icon: '🔑',
+      color: 'bg-yellow-500',
+      path: '/admin/cles',
+      count: 0
+    },
+    {
+      title: 'Méthodes de paiement',
+      description: 'Gérer les moyens de paiement',
+      icon: '💳',
+      color: 'bg-indigo-500',
+      path: '/admin/methodes-paiement',
+      count: 0
+    },
+    {
+      title: 'Ventes',
+      description: 'Gérer les achats et devis',
+      icon: '💰',
+      color: 'bg-teal-500',
+      path: '/admin/ventes',
+      count: 0
+    },
+    {
+      title: 'Emails échoués',
+      description: 'Gérer les échecs d\'envoi d\'emails',
+      icon: '✉️',
+      color: 'bg-red-500',
+      path: '/admin/emails-echec',
+      count: 0
+    }
+  ]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -43,7 +112,7 @@ export default function Dashboard() {
       setIsLoading(true);
       setError(null);
       try {
-        // Statistiques
+        // Statistiques générales
         const statsResponse = await api.get('/api/stats/');
 
         // Mettre à jour les statistiques
@@ -74,6 +143,31 @@ export default function Dashboard() {
               color: 'bg-yellow-100 text-yellow-800'
             },
           ]);
+
+          // Mettre à jour les compteurs des modules
+          const updatedModules = [...modules];
+          updatedModules.find(m => m.title === 'Produits')!.count = statsResponse.data.total_produits || 0;
+          updatedModules.find(m => m.title === 'Clients')!.count = statsResponse.data.total_clients || 0;
+          updatedModules.find(m => m.title === 'Ventes')!.count = statsResponse.data.total_ventes || 0;
+
+          // Récupérer les compteurs pour les autres modules
+          try {
+            const categoriesResponse = await api.get('/api/categories/');
+            updatedModules.find(m => m.title === 'Catégories')!.count = categoriesResponse.data.length;
+
+            const clesResponse = await api.get('/api/cles/');
+            updatedModules.find(m => m.title === 'Clés')!.count = clesResponse.data.length;
+
+            const methodesResponse = await api.get('/api/methodes-paiement/');
+            updatedModules.find(m => m.title === 'Méthodes de paiement')!.count = methodesResponse.data.length;
+
+            const emailsEchecResponse = await api.get('/api/emails-echec/');
+            updatedModules.find(m => m.title === 'Emails échoués')!.count = emailsEchecResponse.data.length;
+          } catch (err) {
+            console.error('Erreur lors de la récupération des compteurs supplémentaires', err);
+          }
+
+          setModules(updatedModules);
         }
 
         // Ventes récentes
@@ -83,7 +177,8 @@ export default function Dashboard() {
           const formattedSales = salesResponse.data.map((sale: any) => ({
             id: sale.id,
             client: sale.client,
-            produit: sale.produit,
+            client_nom: sale.client_nom || 'Client',
+            produit: sale.produit || 'Produit',
             prix: sale.prix,
             date: new Date(sale.date_action).toLocaleDateString(),
           }));
@@ -100,89 +195,167 @@ export default function Dashboard() {
     fetchDashboardData();
   }, [router]);
 
-  // Gestion des erreurs d'API
-  const handleApiError = (err: any) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem(ACCESS_TOKEN);
-      router.push('/auth');
-    }
-  };
-
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-3xl font-extrabold text-purple-800 mb-1">Tableau de Bord</h2>
-        <p className="text-gray-600">Bienvenue dans votre espace d'administration EJ Logiciel</p>
-      </div>
-
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
-          <p className="font-bold">Erreur</p>
-          <p>{error}</p>
-        </div>
-      )}
+    <div className="container mx-auto p-4">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Tableau de bord administratif</h1>
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="inline-block w-8 h-8 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
-          <span className="ml-2 text-purple-700">Chargement des données...</span>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="ml-4 text-lg text-gray-600">Chargement des données...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+          <p>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
+          >
+            Réessayer
+          </button>
         </div>
       ) : (
         <>
-          {/* Cartes de statistiques */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Statistiques */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((stat, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl shadow-md">
-                <div className="flex items-center space-x-4">
-                  <div className={`p-3 rounded-full ${stat.color}`}>
-                    <span className="text-2xl">{stat.icon}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">{stat.title}</p>
-                    <p className="text-2xl font-bold">{stat.value}</p>
+              <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className={`p-4 ${stat.color}`}>
+                  <div className="flex items-center">
+                    <div className="text-2xl mr-4">{stat.icon}</div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{stat.title}</h3>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Graphique des ventes */}
-          <div className="bg-white p-6 rounded-xl shadow-md mb-6">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Évolution des Ventes</h3>
-            <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-              <p className="text-gray-500">Graphique des ventes à implémenter avec une bibliothèque comme Chart.js</p>
-            </div>
+          {/* Modules administratifs */}
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">Modules administratifs</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+            {modules.map((module, index) => (
+              <Link href={module.path} key={index}>
+                <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <div className={`p-4 text-white ${module.color}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-2xl">{module.icon}</span>
+                      {module.count !== undefined && (
+                        <span className="bg-white text-gray-800 rounded-full px-3 py-1 text-sm font-semibold">
+                          {module.count}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="mt-2 font-bold text-xl">{module.title}</h3>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-gray-600">{module.description}</p>
+                    <div className="mt-4 flex justify-end">
+                      <span className="text-sm font-semibold text-blue-500">Accéder →</span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
 
           {/* Ventes récentes */}
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Ventes Récentes</h3>
-            {recentSales.length === 0 ? (
-              <p className="text-center text-gray-500 py-4">Aucune vente récente à afficher</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-purple-50">
-                      <th className="p-3 rounded-l-lg">Client</th>
-                      <th className="p-3">Produit</th>
-                      <th className="p-3">Prix</th>
-                      <th className="p-3 rounded-r-lg">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {recentSales.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50">
-                        <td className="p-3 font-semibold text-purple-900">{sale.client}</td>
-                        <td className="p-3 text-gray-700">{sale.produit}</td>
-                        <td className="p-3 font-bold text-purple-700">{sale.prix} €</td>
-                        <td className="p-3 text-gray-700">{sale.date}</td>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            <div className="bg-teal-100 text-teal-800 p-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <span className="text-2xl mr-2">🔖</span>
+                Ventes récentes
+              </h2>
+            </div>
+            <div className="p-4">
+              {recentSales.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">Aucune vente récente</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {recentSales.map((sale) => (
+                        <tr key={sale.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sale.client_nom || 'Client'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sale.produit}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sale.prix} €
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {sale.date}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <Link href={`/admin/ventes?id=${sale.id}`}>
+                              <span className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer">
+                                Détails →
+                              </span>
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="mt-4 flex justify-end">
+                <Link href="/admin/ventes">
+                  <span className="inline-block bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded transition-colors cursor-pointer">
+                    Voir toutes les ventes
+                  </span>
+                </Link>
               </div>
-            )}
+            </div>
+          </div>
+
+          {/* Raccourcis rapides */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-blue-100 text-blue-800 p-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <span className="text-2xl mr-2">⚡</span>
+                Actions rapides
+              </h2>
+            </div>
+            <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link href="/admin/produits">
+                <div className="border border-gray-200 rounded p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <div className="flex items-center text-gray-800">
+                    <span className="text-2xl mr-3">➕</span>
+                    <span className="font-medium">Ajouter un produit</span>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/clients">
+                <div className="border border-gray-200 rounded p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <div className="flex items-center text-gray-800">
+                    <span className="text-2xl mr-3">👤</span>
+                    <span className="font-medium">Ajouter un client</span>
+                  </div>
+                </div>
+              </Link>
+              <Link href="/admin/ventes">
+                <div className="border border-gray-200 rounded p-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                  <div className="flex items-center text-gray-800">
+                    <span className="text-2xl mr-3">📋</span>
+                    <span className="font-medium">Nouvelle vente</span>
+                  </div>
+                </div>
+              </Link>
+            </div>
           </div>
         </>
       )}

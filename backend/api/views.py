@@ -285,7 +285,7 @@ class CategorieListCreateAPIView(generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsAdmin()]
+        return [IsAdminOrVendeur()]  # Autorise les administrateurs et les vendeurs
 
     def get_queryset(self):
         return Categorie.objects.all()
@@ -635,12 +635,17 @@ class DashboardStatsAPIView(APIView):
 
 
 class ClientListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Utilisateur.objects.filter(role="client")
+    queryset = Utilisateur.objects.all() # Modifié pour inclure tous les utilisateurs au lieu de filtrer par rôle ici
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin] # Changé de IsAdminUser à IsAdmin
+
+    def get_queryset(self):
+        # Le filtrage par rôle peut être fait ici si nécessaire, ou géré par le serializer/frontend
+        # Pour l'admin, il est souvent utile de voir tous les types d'utilisateurs
+        return Utilisateur.objects.all().order_by('username')
 
 class ClientRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Utilisateur.objects.filter(role="client")
+    queryset = Utilisateur.objects.all() # Modifié pour inclure tous les utilisateurs
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
-
+    permission_classes = [IsAdmin] # Changé de IsAdminUser à IsAdmin
+    lookup_field = "pk"

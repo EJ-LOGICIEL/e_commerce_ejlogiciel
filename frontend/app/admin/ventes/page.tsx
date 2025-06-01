@@ -2,15 +2,49 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/lib/apis';
 
+interface Client {
+  id: number;
+  nom_complet: string;
+}
+
+interface Produit {
+  id: number;
+  nom: string;
+  prix: number;
+  prix_min?: number;
+  prix_max?: number;
+  image?: string;
+  description?: string;
+}
+
+interface MethodePaiement {
+  id: number;
+  nom: string;
+}
+
+interface ElementAchatDevis {
+  id?: number;
+  produit: number;
+  produit_nom?: string;
+  quantite: number;
+  prix_total: number;
+}
+
 interface Vente {
   id: number;
-  client: string;
-  produit: string;
-  quantite: number;
+  type: string;
   prix: number;
-  date_action?: string;
-  type?: string;
-  methode_paiement?: string;
+  date_action: string;
+  livree: boolean;
+  payee: boolean;
+  client: number;
+  client_nom?: string;
+  vendeur?: number;
+  vendeur_nom?: string;
+  methode_paiement: number;
+  methode_paiement_nom?: string;
+  code_action?: string;
+  elements: ElementAchatDevis[];
 }
 
 interface Notification {
@@ -30,13 +64,64 @@ export default function SalesPage() {
   const [notification, setNotification] = useState<Notification | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  // Données annexes pour les formulaires
+  const [clients, setClients] = useState<Client[]>([]);
+  const [produits, setProduits] = useState<Produit[]>([]);
+  const [methodesPaiement, setMethodesPaiement] = useState<MethodePaiement[]>([]);
+  const [elementsForm, setElementsForm] = useState<Partial<ElementAchatDevis>[]>([]);
+
+  // Charger les données annexes
+  const fetchAnnexeData = async () => {
+    try {
+      // Charger les clients
+      const clientsResponse = await api.get('/api/clients/');
+      setClients(clientsResponse.data);
+
+      // Charger les produits
+      const produitsResponse = await api.get('/api/produits/');
+      setProduits(produitsResponse.data);
+
+      // Charger les méthodes de paiement
+      const methodesResponse = await api.get('/api/methodes-paiement/');
+      setMethodesPaiement(methodesResponse.data);
+    } catch (err) {
+      console.error('Erreur lors du chargement des données annexes:', err);
+      showNotification('error', 'Erreur lors du chargement des données nécessaires');
+    }
+  };
+
   const fetchVentes = async () => {
     setIsLoading(true);
     setError(null);
     try {
       const res = await api.get('/api/actions/');
-      setVentes(res.data);
-      setFilteredVentes(res.data);
+
+      // Enrichir les ventes avec les noms des entités liées
+      const ventesEnrichies = res.data.map((vente: Vente) => {
+        const client = clients.find(c => c.id === vente.client);
+        const vendeur = clients.find(c => c.id === vente.vendeur);
+        const methodePaiement = methodesPaiement.find(m => m.id === vente.methode_paiement);
+
+        // Enrichir aussi les éléments de vente
+        const elementsEnrichis = vente.elements.map((element: ElementAchatDevis) => {
+          const produit = produits.find(p => p.id === element.produit);
+          return {
+            ...element,
+            produit_nom: produit ? produit.nom : 'Produit inconnu'
+          };
+        });
+
+        return {
+          ...vente,
+          client_nom: client ? client.nom_complet : 'Client inconnu',
+          vendeur_nom: vendeur ? vendeur.nom_complet : 'Aucun vendeur',
+          methode_paiement_nom: methodePaiement ? methodePaiement.nom : 'Méthode inconnue',
+          elements: elementsEnrichis
+        };
+      });
+
+      setVentes(ventesEnrichies);
+      setFilteredVentes(ventesEnrichies);
     } catch (err) {
       setError('Erreur lors du chargement des ventes.');
       showNotification('error', 'Erreur lors du chargement des ventes.');
@@ -46,341 +131,458 @@ export default function SalesPage() {
   };
 
   useEffect(() => {
-    fetchVentes();
+    fetchAnnexeData().then(() => fetchVentes());
   }, []);
+
+  // Rafraîchir les ventes quand les données annexes changent
+  useEffect(() => {
+    if (ventes.length > 0 && (clients.length > 0 || produits.length > 0 || methodesPaiement.length > 0)) {
+      fetchVentes();
+    }
+  }, [clients, produits, methodesPaiement]);
 
   // Show notification
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000); // Auto-hide after 5 seconds
+    setTimeout(() => setNotification(null), 3000);
   };
 
-  // Handle search
+  // Filter ventes based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredVentes(ventes);
     } else {
       const lowercasedSearch = searchTerm.toLowerCase();
-      const filtered = ventes.filter(vente =>
-        vente.client.toLowerCase().includes(lowercasedSearch) ||
-        vente.produit.toLowerCase().includes(lowercasedSearch) ||
-        (vente.type && vente.type.toLowerCase().includes(lowercasedSearch)) ||
-        (vente.methode_paiement && vente.methode_paiement.toLowerCase().includes(lowercasedSearch)) ||
-        vente.prix.toString().includes(searchTerm) ||
-        vente.quantite.toString().includes(searchTerm)
+      const filtered = ventes.filter(
+        vente =>
+          (vente.client_nom && vente.client_nom.toLowerCase().includes(lowercasedSearch)) ||
+          (vente.vendeur_nom && vente.vendeur_nom.toLowerCase().includes(lowercasedSearch)) ||
+          (vente.code_action && vente.code_action.toLowerCase().includes(lowercasedSearch)) ||
+          vente.type.toLowerCase().includes(lowercasedSearch)
       );
       setFilteredVentes(filtered);
     }
   }, [searchTerm, ventes]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const value = e.target.name === 'prix' || e.target.name === 'quantite'
-      ? parseFloat(e.target.value)
-      : e.target.value;
-    setForm({ ...form, [e.target.name]: value });
+  // Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+
+    if (type === 'checkbox') {
+      const target = e.target as HTMLInputElement;
+      setForm({
+        ...form,
+        [name]: target.checked
+      });
+    } else {
+      setForm({
+        ...form,
+        [name]: name === 'prix' || name === 'client' || name === 'vendeur' || name === 'methode_paiement'
+          ? Number(value)
+          : value
+      });
+    }
   };
 
+  // Ajouter un élément au formulaire
+  const ajouterElement = () => {
+    setElementsForm([...elementsForm, { quantite: 1, prix_total: 0 }]);
+  };
+
+  // Supprimer un élément du formulaire
+  const supprimerElement = (index: number) => {
+    const nouveauxElements = [...elementsForm];
+    nouveauxElements.splice(index, 1);
+    setElementsForm(nouveauxElements);
+  };
+
+  // Gérer les changements dans les éléments
+  const handleElementChange = (index: number, e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    const nouveauxElements = [...elementsForm];
+
+    if (name === 'produit') {
+      const produitId = Number(value);
+      const produit = produits.find(p => p.id === produitId);
+
+      nouveauxElements[index] = {
+        ...nouveauxElements[index],
+        produit: produitId,
+        prix_total: produit && nouveauxElements[index].quantite
+          ? produit.prix * (nouveauxElements[index].quantite as number)
+          : 0
+      };
+    } else if (name === 'quantite') {
+      const quantite = Number(value);
+      const produitId = nouveauxElements[index].produit as number;
+      const produit = produits.find(p => p.id === produitId);
+
+      nouveauxElements[index] = {
+        ...nouveauxElements[index],
+        quantite,
+        prix_total: produit ? produit.prix * quantite : 0
+      };
+    }
+
+    setElementsForm(nouveauxElements);
+
+    // Calculer le prix total de la vente
+    const prixTotal = nouveauxElements.reduce((sum, element) => sum + (element.prix_total || 0), 0);
+    setForm({
+      ...form,
+      prix: prixTotal
+    });
+  };
+
+  // Submit form to create or update a sale
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+
+    // Préparer les données avec les éléments
+    const venteData = {
+      ...form,
+      elements: elementsForm
+    };
+
     try {
       if (editingVente) {
-        await api.put(`/api/actions/${editingVente.id}/`, form);
-        showNotification('success', 'Vente modifiée avec succès');
+        // Update existing sale
+        await api.put(`/api/actions/${editingVente.id}/`, venteData);
+        showNotification('success', 'Vente mise à jour avec succès');
       } else {
-        await api.post('/api/actions/', form);
-        showNotification('success', 'Vente ajoutée avec succès');
+        // Create new sale
+        await api.post('/api/actions/', venteData);
+        showNotification('success', 'Vente créée avec succès');
       }
-      setForm({});
-      setEditingVente(null);
       setShowForm(false);
+      setForm({});
+      setElementsForm([]);
+      setEditingVente(null);
       fetchVentes();
     } catch (err) {
-      setError("Erreur lors de l'enregistrement de la vente.");
-      showNotification('error', "Erreur lors de l'enregistrement de la vente.");
+      showNotification('error', 'Erreur lors de l\'enregistrement de la vente');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Delete a sale
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette vente?')) {
+      try {
+        await api.delete(`/api/actions/${id}/`);
+        showNotification('success', 'Vente supprimée avec succès');
+        fetchVentes();
+      } catch (err) {
+        showNotification('error', 'Erreur lors de la suppression de la vente');
+      }
+    }
+  };
+
+  // Edit a sale
   const handleEdit = (vente: Vente) => {
     setEditingVente(vente);
-    setForm({
-      client: vente.client,
-      produit: vente.produit,
-      quantite: vente.quantite,
-      prix: vente.prix,
-      type: vente.type,
-      methode_paiement: vente.methode_paiement
-    });
+    // Copier sans les noms ajoutés
+    const { client_nom, vendeur_nom, methode_paiement_nom, ...venteData } = vente;
+    setForm(venteData);
+    setElementsForm(vente.elements.map(element => {
+      // Enlever les noms de produits ajoutés
+      const { produit_nom, ...elementData } = element;
+      return elementData;
+    }));
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Supprimer cette vente ?')) return;
-    setIsSubmitting(true);
-    try {
-      await api.delete(`/api/actions/${id}/`);
-      showNotification('success', 'Vente supprimée avec succès');
-      fetchVentes();
-    } catch (err) {
-      setError("Erreur lors de la suppression de la vente.");
-      showNotification('error', "Erreur lors de la suppression de la vente.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Gestion des Ventes</h1>
+
+      {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg animate-fade-in ${
-          notification.type === 'success' ? 'bg-green-100 text-green-800 border-l-4 border-green-500' : 
-                                           'bg-red-100 text-red-800 border-l-4 border-red-500'
-        }`}>
-          <div className="flex items-center">
-            <span className={`mr-2 ${notification.type === 'success' ? 'text-green-500' : 'text-red-500'}`}>
-              {notification.type === 'success' ? '✓' : '✗'}
-            </span>
-            {notification.message}
-            <button
-              onClick={() => setNotification(null)}
-              className="ml-4 text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
+        <div className={`p-4 mb-4 rounded ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {notification.message}
         </div>
       )}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-green-800 mb-1">Gestion des Ventes</h2>
-          <p className="text-gray-600">Visualisez, ajoutez, modifiez ou supprimez les ventes de votre boutique logicielle.</p>
-        </div>
+
+      {/* Search and Add button */}
+      <div className="flex justify-between mb-4">
+        <input
+          type="text"
+          placeholder="Rechercher une vente..."
+          className="p-2 border rounded w-2/3"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
         <button
-          className="bg-gradient-to-r from-green-600 to-green-400 hover:from-green-700 hover:to-green-500 text-white font-semibold px-6 py-2 rounded-lg shadow transition"
-          onClick={() => { setShowForm(true); setEditingVente(null); setForm({}); }}
+          onClick={() => {
+            setEditingVente(null);
+            setForm({ type: 'achat', livree: false, payee: false });
+            setElementsForm([]);
+            setShowForm(true);
+          }}
+          className="bg-blue-500 text-white p-2 rounded"
         >
-          + Nouvelle vente
+          Ajouter une vente
         </button>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher une vente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full p-3 pl-10 rounded-lg border border-green-200 focus:ring-2 focus:ring-green-400"
-          />
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            🔍
-          </div>
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              ×
-            </button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
-          <p className="font-bold">Erreur</p>
-          <p>{error}</p>
-        </div>
-      )}
-
+      {/* Sale Form */}
       {showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-green-100 animate-fade-in">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+        <form onSubmit={handleSubmit} className="mb-4 p-4 border rounded">
+          <h2 className="text-xl font-semibold mb-2">
+            {editingVente ? 'Modifier la vente' : 'Ajouter une vente'}
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="mb-2">
+              <label className="block mb-1">Type</label>
+              <select
+                name="type"
+                value={form.type || 'achat'}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="achat">Achat</option>
+                <option value="devis">Devis</option>
+              </select>
+            </div>
+
+            <div className="mb-2">
+              <label className="block mb-1">Client</label>
+              <select
+                name="client"
+                value={form.client || ''}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="">Sélectionner un client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.nom_complet}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-2">
+              <label className="block mb-1">Vendeur (optionnel)</label>
+              <select
+                name="vendeur"
+                value={form.vendeur || ''}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Aucun vendeur</option>
+                {clients.filter(c => c.id !== form.client).map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.nom_complet}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-2">
+              <label className="block mb-1">Méthode de paiement</label>
+              <select
+                name="methode_paiement"
+                value={form.methode_paiement || ''}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="">Sélectionner une méthode</option>
+                {methodesPaiement.map((methode) => (
+                  <option key={methode.id} value={methode.id}>
+                    {methode.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-2">
+              <label className="block mb-1">Prix total</label>
+              <input
+                type="number"
+                name="prix"
+                value={form.prix || 0}
+                readOnly
+                className="w-full p-2 border rounded bg-gray-100"
+              />
+            </div>
+
+            <div className="flex items-center mb-2">
+              <label className="flex items-center">
                 <input
-                  type="text"
-                  name="client"
-                  placeholder="Client"
-                  value={form.client || ''}
+                  type="checkbox"
+                  name="livree"
+                  checked={form.livree || false}
                   onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
-                  required
+                  className="mr-2"
                 />
-              </div>
-              <div className="w-full md:w-1/3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Produit</label>
+                Livrée
+              </label>
+
+              <label className="flex items-center ml-4">
                 <input
-                  type="text"
+                  type="checkbox"
+                  name="payee"
+                  checked={form.payee || false}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                Payée
+              </label>
+            </div>
+          </div>
+
+          <h3 className="text-lg font-semibold mb-2">Produits</h3>
+
+          {elementsForm.map((element, index) => (
+            <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 mb-2 p-2 border rounded">
+              <div className="md:col-span-5">
+                <label className="block mb-1">Produit</label>
+                <select
                   name="produit"
-                  placeholder="Produit"
-                  value={form.produit || ''}
-                  onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
+                  value={element.produit || ''}
+                  onChange={(e) => handleElementChange(index, e)}
+                  className="w-full p-2 border rounded"
                   required
-                />
+                >
+                  <option value="">Sélectionner un produit</option>
+                  {produits.map((produit) => (
+                    <option key={produit.id} value={produit.id}>
+                      {produit.nom}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="w-full md:w-1/6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
+
+              <div className="md:col-span-3">
+                <label className="block mb-1">Quantité</label>
                 <input
                   type="number"
                   name="quantite"
-                  placeholder="Quantité"
-                  value={form.quantite || ''}
-                  onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
+                  value={element.quantite || 1}
+                  onChange={(e) => handleElementChange(index, e)}
+                  className="w-full p-2 border rounded"
+                  min="1"
                   required
                 />
               </div>
-              <div className="w-full md:w-1/6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prix (€)</label>
+
+              <div className="md:col-span-3">
+                <label className="block mb-1">Prix total</label>
                 <input
                   type="number"
-                  step="0.01"
-                  name="prix"
-                  placeholder="Prix"
-                  value={form.prix || ''}
-                  onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
-                  required
+                  value={element.prix_total || 0}
+                  readOnly
+                  className="w-full p-2 border rounded bg-gray-100"
                 />
               </div>
-            </div>
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="w-full md:w-1/2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  name="type"
-                  value={form.type || ''}
-                  onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
-                  required
+
+              <div className="md:col-span-1 flex items-end">
+                <button
+                  type="button"
+                  onClick={() => supprimerElement(index)}
+                  className="bg-red-500 text-white p-2 rounded"
                 >
-                  <option value="">Sélectionner un type</option>
-                  <option value="ACHAT">ACHAT</option>
-                  <option value="DEVIS">DEVIS</option>
-                </select>
-              </div>
-              <div className="w-full md:w-1/2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Méthode de paiement</label>
-                <select
-                  name="methode_paiement"
-                  value={form.methode_paiement || ''}
-                  onChange={handleChange}
-                  className="border border-green-200 p-2 rounded w-full focus:ring-2 focus:ring-green-400"
-                  required
-                >
-                  <option value="">Sélectionner une méthode</option>
-                  <option value="CB">Carte bancaire</option>
-                  <option value="VIREMENT">Virement</option>
-                  <option value="ESPECES">Espèces</option>
-                  <option value="CHEQUE">Chèque</option>
-                </select>
+                  X
+                </button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-2">
-              <button
-                type="submit"
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow disabled:opacity-50 flex items-center"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <><span className="inline-block w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Traitement...</>
-                ) : (
-                  editingVente ? 'Modifier' : 'Ajouter'
-                )}
-              </button>
-              <button
-                type="button"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow"
-                onClick={() => { setShowForm(false); setEditingVente(null); setForm({}); }}
-              >
-                Annuler
-              </button>
-            </div>
-          </form>
+          ))}
+
+          <button
+            type="button"
+            onClick={ajouterElement}
+            className="bg-green-500 text-white p-2 rounded mb-4"
+          >
+            Ajouter un produit
+          </button>
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="bg-gray-300 p-2 rounded"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white p-2 rounded"
+              disabled={isSubmitting || elementsForm.length === 0}
+            >
+              {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Sales List */}
+      {isLoading ? (
+        <p className="text-center">Chargement des ventes...</p>
+      ) : error ? (
+        <p className="text-red-500 text-center">{error}</p>
+      ) : filteredVentes.length === 0 ? (
+        <p className="text-center">Aucune vente trouvée</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Code</th>
+                <th className="border p-2">Type</th>
+                <th className="border p-2">Client</th>
+                <th className="border p-2">Vendeur</th>
+                <th className="border p-2">Date</th>
+                <th className="border p-2">Prix</th>
+                <th className="border p-2">Paiement</th>
+                <th className="border p-2">État</th>
+                <th className="border p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVentes.map((vente) => (
+                <tr key={vente.id}>
+                  <td className="border p-2">{vente.code_action || '-'}</td>
+                  <td className="border p-2">{vente.type === 'achat' ? 'Achat' : 'Devis'}</td>
+                  <td className="border p-2">{vente.client_nom}</td>
+                  <td className="border p-2">{vente.vendeur_nom || '-'}</td>
+                  <td className="border p-2">{new Date(vente.date_action).toLocaleDateString()}</td>
+                  <td className="border p-2">{vente.prix}</td>
+                  <td className="border p-2">{vente.methode_paiement_nom}</td>
+                  <td className="border p-2">
+                    <span className={`px-2 py-1 rounded ${vente.payee ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {vente.payee ? 'Payée' : 'Non payée'}
+                    </span>
+                    <span className={`ml-1 px-2 py-1 rounded ${vente.livree ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {vente.livree ? 'Livrée' : 'Non livrée'}
+                    </span>
+                  </td>
+                  <td className="border p-2">
+                    <button
+                      onClick={() => handleEdit(vente)}
+                      className="bg-yellow-500 text-white p-1 rounded mr-2"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => handleDelete(vente.id)}
+                      className="bg-red-500 text-white p-1 rounded"
+                    >
+                      Supprimer
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-      <div className="bg-white p-6 rounded-xl shadow-lg">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-32">
-            <div className="inline-block w-8 h-8 border-4 border-green-400 border-t-transparent rounded-full animate-spin"></div>
-            <span className="ml-2 text-green-700">Chargement...</span>
-          </div>
-        ) : filteredVentes.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
-            {searchTerm ? 'Aucune vente ne correspond à votre recherche.' : 'Aucune vente pour le moment.'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-separate border-spacing-y-2">
-              <thead>
-                <tr className="bg-green-50">
-                  <th className="p-3 rounded-l-lg">Client</th>
-                  <th className="p-3">Produit</th>
-                  <th className="p-3">Qté</th>
-                  <th className="p-3">Prix (€)</th>
-                  <th className="p-3">Type</th>
-                  <th className="p-3">Paiement</th>
-                  <th className="p-3">Date</th>
-                  <th className="p-3 rounded-r-lg">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVentes.map((vente) => (
-                  <tr key={vente.id} className="bg-white shadow-sm hover:shadow-md transition">
-                    <td className="p-3 font-semibold text-green-900">{vente.client}</td>
-                    <td className="p-3 text-gray-700">{vente.produit}</td>
-                    <td className="p-3 text-gray-700">{vente.quantite}</td>
-                    <td className="p-3 text-green-700 font-bold">{vente.prix} €</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        vente.type === 'ACHAT' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {vente.type || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-gray-700">{vente.methode_paiement || '-'}</td>
-                    <td className="p-3 text-gray-700">{vente.date_action ? new Date(vente.date_action).toLocaleDateString() : '-'}</td>
-                    <td className="p-3 flex gap-2">
-                      <button
-                        className="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded shadow"
-                        onClick={() => handleEdit(vente)}
-                        disabled={isSubmitting}
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded shadow"
-                        onClick={() => handleDelete(vente.id)}
-                        disabled={isSubmitting}
-                      >
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      <style jsx>{`
-        .animate-fade-in {
-          animation: fadeIn 0.3s ease-in-out;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

@@ -31,7 +31,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# Ajout des hôtes spécifiques en plus de ceux définis dans les variables d'environnement
+allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = allowed_hosts_env + ["192.168.0.179", "209.38.118.77", "ejlogiciel.com"]
 
 # Configuration CORS plus permissive pour le développement
 CORS_ALLOW_ALL_ORIGINS = True  # Autoriser toutes les origines en mode développement
