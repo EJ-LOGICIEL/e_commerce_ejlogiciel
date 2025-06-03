@@ -14,32 +14,26 @@ import {
 } from '@/features/produit/produitSlice';
 
 import {AppDispatch} from "@/redux/store";
+import {TypeProduit} from "@/utils/types";
+import Loader from "@/ui/Loader";
 
 export default function ProduitsPage() {
     const dispatch: AppDispatch = useDispatch();
-    const produits = useSelector(selectProduits);
-    const loading = useSelector(selectLoading);
-    const error = useSelector(selectError);
+    const produits: TypeProduit[] = useSelector(selectProduits);
+    const loading: boolean = useSelector(selectLoading);
+    const error: string | null = useSelector(selectError);
 
     useEffect(() => {
         dispatch(fetchProduits());
     }, [dispatch]);
 
-    const handleAddToCart = (produit: any) => {
+    const handleAddToCart = (produit: TypeProduit) => {
         dispatch(ajouterAuPanier(produit));
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#061e53]"></div>
-            </div>
-        );
-    }
-
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="flex items-center justify-center">
                 <div className="text-red-600 text-center">
                     <FiInfo className="mx-auto h-12 w-12 mb-4"/>
                     <p className="text-xl font-semibold">{error}</p>
@@ -50,17 +44,18 @@ export default function ProduitsPage() {
 
     return (
         <div className="pt-5 px-4 lg:px-8">
+            {loading && <Loader />}
             <h1 className="text-3xl font-bold text-[#061e53] mb-3 text-center">
                 Nos Produits
             </h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {produits.map((produit) => (
                     <motion.div
                         key={produit.id}
-                        initial={{opacity: 0, y: 20}}
+                        initial={{opacity: 0, y: 10}}
                         animate={{opacity: 1, y: 0}}
-                        transition={{duration: 0.3}}
+                        transition={{duration: 0.5}}
                         className="flex flex-col bg-white"
                     >
                         <Image

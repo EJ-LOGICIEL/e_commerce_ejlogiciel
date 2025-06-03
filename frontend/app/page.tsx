@@ -36,7 +36,7 @@ export default function HomePage() {
                     <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 mt-6">
                         <button
                             className="bg-[#061e53] text-white px-6 py-3 rounded-full font-bold hover:bg-black transition">
-                            <Link href={'/produit'}>
+                            <Link href={'/produits'}>
                                 Découvrir nos produits <IoIosArrowRoundForward className="inline text-2xl ml-1"/>
                             </Link>
                         </button>
