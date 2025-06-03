@@ -4,6 +4,7 @@ import React, {useState} from 'react';
 import Link from 'next/link';
 import {authenticate} from '@/lib/auth';
 import {AnimatePresence, motion} from 'framer-motion';
+import {useRouter} from "next/navigation";
 
 interface LoginData {
     username: string;
@@ -19,6 +20,7 @@ export default function LoginPage() {
     const [loginData, setLoginData] = useState<LoginData>(initialLoginData);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter()
 
     const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {name, value} = e.target;
@@ -31,15 +33,19 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            const res = await authenticate(loginData, 'token');
+            const res: true | null = await authenticate(loginData, 'token');
             if (!res) {
                 setError('Nom d\'utilisateur ou mot de passe incorrect');
+                return
             }
+            router.push('/produits')
+
         } catch (err) {
             setError('Une erreur est survenue lors de la connexion');
         } finally {
             setIsLoading(false);
         }
+
     };
 
     return (

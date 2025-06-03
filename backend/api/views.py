@@ -133,6 +133,7 @@ class CustomTokenRefreshView(TokenRefreshView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         request._full_data = {"refresh": request.COOKIES.get("refresh_token")}
+        print(request)
         res: Response = super().post(request, *args, **kwargs)
         refresh_token = res.data.pop("refresh")
 

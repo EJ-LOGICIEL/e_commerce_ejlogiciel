@@ -26,10 +26,10 @@ function Header(): React.ReactElement {
                 <Link href="/" className={navClass}>
                     Accueil
                 </Link>
-                <Link href="/produit" className={navClass}>
+                <Link href="/produits" className={navClass}>
                     Produits
                 </Link>
-                <Link href="/compte" className={navClass}>
+                <Link href="/se-connecter" className={navClass}>
                     Mon compte
                 </Link>
             </nav>

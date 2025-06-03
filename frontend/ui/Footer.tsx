@@ -10,7 +10,7 @@ function Footer() {
                 Accueil
             </Link>
 
-            <Link href='/produit'>
+            <Link href='/produits'>
                 <FiPackage className='mr-2 inline-block'/>
                 Produits
             </Link>
