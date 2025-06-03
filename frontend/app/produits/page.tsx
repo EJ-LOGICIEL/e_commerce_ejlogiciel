@@ -11,11 +11,12 @@ import {
     selectError,
     selectLoading,
     selectProduits
-} from '@/features/produits/produitSlice';
+} from '@/features/produit/produitSlice';
 import {toast} from 'react-hot-toast';
+import {AppDispatch} from "@/redux/store";
 
 export default function ProduitsPage() {
-    const dispatch = useDispatch();
+    const dispatch: AppDispatch = useDispatch();
     const produits = useSelector(selectProduits);
     const loading = useSelector(selectLoading);
     const error = useSelector(selectError);

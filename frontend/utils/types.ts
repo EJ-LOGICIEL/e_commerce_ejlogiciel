@@ -1,5 +1,5 @@
 export interface UserState {
-    id: number;
+    id?: number;
     username: string;
     nom_complet: string;
     role: string;
@@ -14,14 +14,14 @@ export interface UserState {
 }
 
 
-export interface Produit {
+export interface TypeProduit {
     id: number;
     nom: string;
     description: string;
     prix: number;
     quantite: number;
     image: string;
-    categorie: Categorie;
+    categorie: Categorie | number;
 }
 
 export interface Categorie {
@@ -34,10 +34,14 @@ export interface Cle {
     contenue: string;
     code_cle: string;
     validite: string;
-    produit: Produit;
+    produit: TypeProduit | number;
 }
 
 export interface loginData {
     username: string;
     password: string;
+}
+
+export interface TypeCartItem extends TypeProduit {
+    quantite: number;
 }
