@@ -11,6 +11,7 @@ const sectionVariants = {
 };
 
 export default function HomePage() {
+
     return (
         <main className="text-gray-800 px-6 py-12 space-y-24 max-w-7xl mx-auto">
             {/* HERO SECTION */}

@@ -1,12 +1,23 @@
+'use client';
 import Img from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, {useEffect} from 'react';
 import {FiShoppingCart} from 'react-icons/fi';
+import {useDispatch, useSelector} from "react-redux";
+import {chargerPanier, selectPanier} from "@/features/produit/produitSlice";
+import {TypeCartItem} from "@/utils/types";
+import {AppDispatch} from "@/redux/store";
 
 function Header(): React.ReactElement {
+    const dispatch: AppDispatch = useDispatch();
+    useEffect(() => {
+        dispatch(chargerPanier())
+    }, [dispatch])
     const navClass: string =
         'border border-transparent py-3 hover:border-b-blue-400 transition-all' +
         ' duration-100 hover:border-y-2 hover:border-t-blue-400 hover:text-blue-600';
+    const panier: TypeCartItem[] = useSelector(selectPanier)
+    const nombre_produits = panier.reduce((acc, item) => acc + item.quantite, 0);
     return (
         <header className="mx-auto flex max-w-[85%] items-center justify-between pt-2">
             {/* Logo à gauche */}
@@ -42,7 +53,7 @@ function Header(): React.ReactElement {
                 <FiShoppingCart className="text-2xl text-black"/>
                 <span
                     className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white">
-      0
+      {nombre_produits}
     </span>
             </Link>
         </header>

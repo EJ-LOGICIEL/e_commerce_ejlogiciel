@@ -2,8 +2,8 @@ import {configureStore} from '@reduxjs/toolkit';
 import {combineReducers} from 'redux';
 
 import {FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE,} from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
 import {Persistor} from 'redux-persist/es/types';
+import storage from 'redux-persist/lib/storage';
 
 import userReducer from '../features/user/userSlice';
 import produitReducer from '../features/produit/produitSlice';

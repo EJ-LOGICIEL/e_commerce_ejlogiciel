@@ -1,6 +1,5 @@
 import axios, {AxiosInstance} from "axios";
-import {store} from "@/redux/store";
-import {updateToken} from "@/features/user/userSlice";
+import {ACCESS_TOKEN} from "@/utils/constant";
 
 const api: AxiosInstance = axios.create({
     baseURL: 'http://127.0.0.1:8001/api',
@@ -9,7 +8,7 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.response.use(
     config => {
-        const token: string | null = store.getState().user.token;
+        const token: string | null = localStorage.getItem(ACCESS_TOKEN);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -19,14 +18,6 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-api.interceptors.request.use((config) => {
-    const token: string | null = store.getState().user.token;
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
 
 api.interceptors.response.use(
     (response) => response,
@@ -51,7 +42,7 @@ const refreshToken = async () => {
     try {
         const response = await api.post("/refresh/");
         const newToken: string = response.data.access;
-        store.dispatch(updateToken(newToken));
+        localStorage.setItem(ACCESS_TOKEN, newToken)
         return newToken;
     } catch (error) {
         console.error("Failed to refresh token", error);
