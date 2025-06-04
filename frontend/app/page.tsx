@@ -4,6 +4,9 @@ import {motion} from 'framer-motion';
 import Image from 'next/image';
 import {IoIosArrowRoundForward} from 'react-icons/io';
 import Link from "next/link";
+import {UserState} from "@/utils/types";
+import {useSelector} from "react-redux";
+import {selectCurrentUser} from "@/features/user/userSlice";
 
 const sectionVariants = {
     hidden: {opacity: 0, y: 40},
@@ -11,7 +14,7 @@ const sectionVariants = {
 };
 
 export default function HomePage() {
-
+    const user: UserState | null = useSelector(selectCurrentUser)
     return (
         <main className="text-gray-800 px-6 py-12 space-y-24 max-w-7xl mx-auto">
             {/* HERO SECTION */}
@@ -40,12 +43,17 @@ export default function HomePage() {
                                 Découvrir nos produits <IoIosArrowRoundForward className="inline text-2xl ml-1"/>
                             </Link>
                         </button>
-                        <button
+                        {!user ? <button
                             className="border border-[#061e53] text-[#061e53] px-6 py-3 rounded-full font-bold hover:bg-[#061e53] hover:text-white transition">
                             <Link href={'/se-connecter'}>
                                 Se connecter
                             </Link>
-                        </button>
+                        </button> : <button
+                            className="border border-[#061e53] text-[#061e53] px-6 py-3 rounded-full font-bold hover:bg-[#061e53] hover:text-white transition">
+                            <Link href={'/mon-compte'}>
+                                Mon compte
+                            </Link>
+                        </button>}
                     </div>
                 </div>
                 <div className="w-full md:w-1/2 flex justify-center">

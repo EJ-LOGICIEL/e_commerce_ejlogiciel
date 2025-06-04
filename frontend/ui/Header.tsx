@@ -5,11 +5,13 @@ import React, {useEffect} from 'react';
 import {FiShoppingCart} from 'react-icons/fi';
 import {useDispatch, useSelector} from "react-redux";
 import {chargerPanier, selectPanier} from "@/features/produit/produitSlice";
-import {TypeCartItem} from "@/utils/types";
+import {TypeCartItem, UserState} from "@/utils/types";
 import {AppDispatch} from "@/redux/store";
+import {selectCurrentUser} from "@/features/user/userSlice";
 
 function Header(): React.ReactElement {
     const dispatch: AppDispatch = useDispatch();
+    const user: UserState | null = useSelector(selectCurrentUser)
     useEffect(() => {
         dispatch(chargerPanier())
     }, [dispatch])
@@ -40,7 +42,7 @@ function Header(): React.ReactElement {
                 <Link href="/produits" className={navClass}>
                     Produits
                 </Link>
-                <Link href="/se-connecter" className={navClass}>
+                <Link href={user ? '/mon-complte' : '/se-connecter'} className={navClass}>
                     Mon compte
                 </Link>
             </nav>

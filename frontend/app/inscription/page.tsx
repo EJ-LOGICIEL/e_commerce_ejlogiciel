@@ -5,6 +5,7 @@ import {UserState} from '@/utils/types';
 import Link from "next/link";
 import {authenticate} from "@/lib/auth";
 import {AnimatePresence, motion} from "framer-motion";
+import {useRouter} from "next/navigation";
 
 const initialRegisterData: Partial<UserState & { password: string, confirmPassword: string }> = {
     username: '',
@@ -26,6 +27,8 @@ export default function AuthPage() {
     const [registerData, setRegisterData] = useState(initialRegisterData);
     const [error, setError] = useState<string | null>(null);
     const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const {name, value} = e.target;
@@ -57,10 +60,22 @@ export default function AuthPage() {
             setPasswordError('Le mot de passe doit contenir au moins 8 caractères');
             return;
         }
+        setIsLoading(true)
+        const res: number | true | null = await authenticate(registerData, 'signup');
+        if (res === true) {
+            setRegisterData(initialRegisterData);
+            setIsLoading(false);
+            router.push('/produits')
+            return
+        }
+        if (res === 400) {
+            setError('Nom d\'utilisateur existe dèjà');
+        } else {
+            setError('Une erreur est survenue lors de l\'inscription');
+        }
+        setIsLoading(false)
+        return
 
-        const res: true | null = await authenticate(registerData as UserState, 'signup');
-        if (!res) setError('Échec de l\'inscription, ressayez plus tard');
-        setRegisterData(initialRegisterData);
     };
 
     return (
@@ -288,18 +303,26 @@ export default function AuthPage() {
                         <div className="mt-4 flex flex-col items-center">
                             <motion.button
                                 type="submit"
-                                disabled={!!passwordError}
-                                whileHover={{scale: !passwordError ? 1.02 : 1}}
-                                whileTap={{scale: !passwordError ? 0.98 : 1}}
-                                className={` py-3 px-6 rounded-full text-base
-                                 font-medium transition-all duration-200 ${
-                                    !passwordError
-                                        ? 'bg-[#061e53] text-white hover:bg-[#0c2b7a]' +
-                                        ' shadow-lg hover:shadow-xl'
-                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                disabled={isLoading}
+                                whileHover={{scale: !isLoading ? 1.02 : 1}}
+                                whileTap={{scale: !isLoading ? 0.98 : 1}}
+                                className={`py-3 px-6 rounded-full text-base font-medium transition-all duration-200
+                                    ${isLoading
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-[#061e53] text-white hover:bg-[#0c2b7a] shadow-lg hover:shadow-xl'
                                 }`}
                             >
-                                S&#39;inscrire
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center">
+                                        <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                    strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor"
+                                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                        </svg>
+                                        inscription en cours...
+                                    </div>
+                                ) : "S'inscrire"}
                             </motion.button>
 
                             <Link

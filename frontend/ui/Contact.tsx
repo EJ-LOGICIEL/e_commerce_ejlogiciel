@@ -36,9 +36,11 @@ export default function Contact() {
                 <div>
                     <h3 className="font-semibold text-[#061e53] mb-4">Support</h3>
                     <ul className="space-y-2 text-sm">
-                        <li><Link href="mailto:romeomanoela123@gmail.com" className="hover:text-[#061e53]">Signaler un
-                            problème</Link></li>
+                        <li><Link href="mailto:esoalahyjosefa@gmail.com"
+                                  className="hover:text-[#061e53]">esoalahyjosefa@gmail.com</Link></li>
+                        <li className="hover:text-[#061e53]">+261 34 50 035 13</li>
                     </ul>
+
                 </div>
                 {/* Formulaire de retour */}
                 <div>

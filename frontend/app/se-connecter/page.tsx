@@ -31,20 +31,21 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null);
         setIsLoading(true);
-
-        try {
-            const res: true | null = await authenticate(loginData, 'token');
-            if (!res) {
-                setError('Nom d\'utilisateur ou mot de passe incorrect');
-                return
-            }
-            router.push('/produits')
-
-        } catch (err) {
-            setError('Une erreur est survenue lors de la connexion');
-        } finally {
+        const res: number | true | null = await authenticate(loginData, 'token');
+        if (res === true) {
+            router.push('/produits');
             setIsLoading(false);
+            setLoginData(initialLoginData);
+            return
         }
+        if (res === 401) {
+            setIsLoading(false);
+            setError('Nom d\'utilisateur ou mot de passe incorrect');
+            return
+        }
+        setIsLoading(false);
+        setError('Une erreur est survenue lors de la connexion');
+        return
 
     };
 

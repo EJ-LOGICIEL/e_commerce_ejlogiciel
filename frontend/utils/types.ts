@@ -2,15 +2,16 @@ export interface UserState {
     id?: number;
     username: string;
     nom_complet: string;
-    role: string;
+    email: string;
     type: string;
+    role: string;
     numero_telephone: string;
     adresse: string;
-    email: string;
-    code_utilisateur: string;
+    code_utilisateur?: string;
     nif?: string;
     stats?: string;
     rcs?: string;
+
 }
 
 

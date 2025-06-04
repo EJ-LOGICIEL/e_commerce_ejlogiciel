@@ -16,11 +16,11 @@ const userSlice = createSlice({
     reducers: {
         loginUser: (
             state: WritableDraft<AuthState>,
-            action: PayloadAction<{
-                user: UserState;
-            }>
+            action: PayloadAction<UserState>
         ) => {
-            state.user = action.payload.user;
+            console.log(action.payload)
+            state.user = action.payload;
+            console.log(state.user)
         },
         logout: (
             state: WritableDraft<AuthState>
