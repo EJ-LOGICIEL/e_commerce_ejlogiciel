@@ -554,7 +554,7 @@ class ActionCreateAPIView(APIView):
                             "id": cle.id,
                             "contenue": cle.contenue,
                             "code_cle": cle.code_cle,
-                            "validite": cle.validite,
+                            "validite": produit.validite,
                         }
                     )
         # Pour les devis, juste lister les produits sans attribuer de clés
@@ -564,10 +564,8 @@ class ActionCreateAPIView(APIView):
                 produit = produits_map[str(produit_id)]
                 quantite = item.get("quantite", 1)
 
-                # Créer une liste vide pour chaque produit
                 cles_selectionnees[produit.nom] = []
 
-                # Ajouter des entrées factices pour représenter la quantité
                 for _ in range(quantite):
                     cles_selectionnees[produit.nom].append(
                         {
@@ -580,7 +578,6 @@ class ActionCreateAPIView(APIView):
 
         client = Utilisateur.objects.get(id=action_data["client"])
 
-        # Envoyer l'email de manière asynchrone
         envoyer_cles_email_async.delay(
             client_id=client.id, action_id=action.id, cles_data=cles_selectionnees
         )
@@ -650,26 +647,22 @@ class DashboardStatsAPIView(APIView):
 
     def get(self, request):
         today = datetime.today().date()
-        # Date d'il y a 30 jours
         thirty_days_ago = today - timedelta(days=30)
 
         total_users = Utilisateur.objects.count()
         total_products = Produit.objects.count()
         total_actions = Action.objects.count()
 
-        # Ventes des 30 derniers jours
         recent_sales = Action.objects.filter(
             type="ACHAT", date_action__gte=thirty_days_ago
         ).aggregate(total=Sum("prix"), count=Count("id"))
 
-        # Produits les plus vendus
         top_products = (
             ElementAchatDevis.objects.values("produit__nom")
             .annotate(total_sales=Count("id"))
             .order_by("-total_sales")[:5]
         )
 
-        # Clients les plus actifs
         top_clients = (
             Action.objects.values("client__nom_complet")
             .annotate(total_purchases=Count("id"), total_spent=Sum("prix"))

@@ -61,6 +61,7 @@ class ProduitSerializer(serializers.ModelSerializer):
             "id",
             "nom",
             "description",
+            "validite",
             "image",
             "prix_min",
             "prix",

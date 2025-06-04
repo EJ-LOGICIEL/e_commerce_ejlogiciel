@@ -3,18 +3,20 @@
 import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {motion} from 'framer-motion';
-import {FiInfo, FiShoppingCart} from 'react-icons/fi';
+import {FiInfo, FiShoppingCart, FiTrash} from 'react-icons/fi';
 import Image from 'next/image';
 import {
     ajouterAuPanier,
     fetchProduits,
+    retirerDuPanier,
     selectError,
     selectLoading,
+    selectPanier,
     selectProduits
 } from '@/features/produit/produitSlice';
 
 import {AppDispatch} from "@/redux/store";
-import {TypeProduit} from "@/utils/types";
+import {TypeCartItem, TypeProduit} from "@/utils/types";
 import Loader from "@/ui/Loader";
 
 export default function ProduitsPage() {
@@ -22,6 +24,7 @@ export default function ProduitsPage() {
     const produits: TypeProduit[] = useSelector(selectProduits);
     const loading: boolean = useSelector(selectLoading);
     const error: string | null = useSelector(selectError);
+    const panier: TypeCartItem[] = useSelector(selectPanier);
 
     useEffect(() => {
         dispatch(fetchProduits());
@@ -44,13 +47,13 @@ export default function ProduitsPage() {
 
     return (
         <div className="pt-5 px-4 lg:px-8">
-            {loading && <Loader />}
+            {loading && <Loader/>}
             <h1 className="text-3xl font-bold text-[#061e53] mb-3 text-center">
                 Nos Produits
             </h1>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {produits.map((produit) => (
+                {produits.map((produit: TypeProduit) => (
                     <motion.div
                         key={produit.id}
                         initial={{opacity: 0, y: 10}}
@@ -74,19 +77,22 @@ export default function ProduitsPage() {
                         />
 
                         <div className="mt-[-30px] p-2">
-                            <h2 className="text-lg pt-2 font-semibold text-center text-[#061e53]">
+                            <h2 className="text-lg pt-1 font-semibold text-center text-[#061e53]">
                                 {produit.nom}
                             </h2>
-                            <p className="text-gray-600 pt-2 text-center text-sm">
+                            <p className="text-gray-600 pt-1 text-center text-sm">
                                 {produit.description}
                             </p>
-                            <div className="text-center pt-2 text-sm">
+                            <p className="text-gray-600 pt-1 text-center text-sm">
+                                <span className={'font-semibold'}>Validité:</span>{produit.validite}
+                            </p>
+                            <div className="text-center pt-1 text-sm">
                                 <span className="text-gray-500">Prix: </span>
                                 <span className="font-semibold text-[#061e53]">
                                     {Number(produit.prix).toLocaleString()} Ar
                                 </span>
                             </div>
-                            <motion.button
+                            {!panier.find(item => item.id === produit.id) ? <motion.button
                                 whileHover={{scale: 1.02}}
                                 whileTap={{scale: 0.98}}
                                 onClick={() => handleAddToCart(produit)}
@@ -96,7 +102,19 @@ export default function ProduitsPage() {
                             >
                                 <FiShoppingCart className="h-4 w-4"/>
                                 <span>Ajouter au panier</span>
-                            </motion.button>
+                            </motion.button> : <motion.button
+                                whileHover={{scale: 1.02}}
+                                whileTap={{scale: 0.98}}
+                                onClick={() => {
+                                    dispatch(retirerDuPanier(produit.id));
+                                }}
+                                className="w-full mt-1 py-2 px-3 bg-red-500 text-white rounded-full font-medium
+                             flex items-center justify-center space-x-1 hover:bg-red-600
+                             transition-colors duration-200 shadow-md hover:shadow-lg text-sm"
+                            >
+                                <FiTrash className="h-4 w-4"/>
+                                <span>Retirer du panier</span>
+                            </motion.button>}
                         </div>
                     </motion.div>
                 ))}

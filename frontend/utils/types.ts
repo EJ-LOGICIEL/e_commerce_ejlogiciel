@@ -20,7 +20,7 @@ export interface TypeProduit {
     nom: string;
     description: string;
     prix: number;
-    quantite: number;
+    validite: string;
     image: string;
     categorie: Categorie | number;
 }

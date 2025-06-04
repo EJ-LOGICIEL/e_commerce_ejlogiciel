@@ -50,7 +50,6 @@ export default function AuthPage() {
     const handleRegisterSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-
         if (registerData.password !== registerData.confirmPassword) {
             setPasswordError('Les mots de passe ne correspondent pas');
             return;
@@ -63,9 +62,9 @@ export default function AuthPage() {
         setIsLoading(true)
         const res: number | true | null = await authenticate(registerData, 'signup');
         if (res === true) {
+            router.push('/produits')
             setRegisterData(initialRegisterData);
             setIsLoading(false);
-            router.push('/produits')
             return
         }
         if (res === 400) {

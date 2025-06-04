@@ -34,8 +34,8 @@ export default function LoginPage() {
         const res: number | true | null = await authenticate(loginData, 'token');
         if (res === true) {
             router.push('/produits');
-            setIsLoading(false);
             setLoginData(initialLoginData);
+            setIsLoading(false);
             return
         }
         if (res === 401) {

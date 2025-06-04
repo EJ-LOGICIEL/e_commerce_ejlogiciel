@@ -30,7 +30,8 @@ class Utilisateur(AbstractUser):
         return self.nom_complet
 
     def save(self, *args, **kwargs):
-        self.code_utilisateur = f"{self.role}-{self.id}"
+
+        self.code_utilisateur = f"{self.role}-{self._get_pk_val()}"
         super().save(*args, **kwargs)
 
     class Meta:
@@ -49,11 +50,20 @@ class Categorie(models.Model):
 
 class Produit(models.Model):
 
+    CHOIX_VALIDITE = [
+        ("1 ans", "1 ans"),
+        ("2 ans", "2 ans"),
+        ("3 ans", "3 ans"),
+        ("a vie", "a vie"),
+    ]
+
     categorie = models.ForeignKey(
         Categorie, on_delete=models.CASCADE, related_name="produits"
     )
-    nom = models.CharField(max_length=100)
+    nom = models.CharField(max_length=100, unique=False)
     description = models.TextField()
+    validite = models.CharField(max_length=10, choices=CHOIX_VALIDITE, default="1 ans")
+    code_produit = models.CharField(max_length=50, null=True, blank=True)
     image = models.ImageField(upload_to="produits/")
 
     prix_min = models.DecimalField(max_digits=10, decimal_places=2)
@@ -63,20 +73,17 @@ class Produit(models.Model):
     def __str__(self):
         return f"{self.nom} - {self.prix}"
 
+    def save(self, *args, **kwargs):
+        self.code_produit = f"{self.categorie.nom}-{self.nom}-{self._get_pk_val()}"
+        super().save(*args, **kwargs)
+
 
 class Cle(models.Model):
-    CHOIX_VALIDITE = [
-        ("1 ans", "1 ans"),
-        ("2 ans", "2 ans"),
-        ("3 ans", "3 ans"),
-        ("a vie", "a vie"),
-    ]
 
     contenue = models.CharField(max_length=100)
     produit = models.ForeignKey(
         Produit, on_delete=models.CASCADE, related_name="produits"
     )
-    validite = models.CharField(max_length=10, choices=CHOIX_VALIDITE)
     disponiblite = models.BooleanField(default=True)
     code_cle = models.CharField(max_length=50, null=True, blank=True)
 
@@ -128,7 +135,7 @@ class Action(models.Model):
         return f"{self.type} - {self.client.nom} - {self.code_action}"
 
     def save(self, *args, **kwargs):
-        self.code_action = f"EJ-{self.type}-{self.id}"
+        self.code_action = f"EJ-{self.type}-{self._get_pk_val()}"
         super().save(*args, **kwargs)
 
 

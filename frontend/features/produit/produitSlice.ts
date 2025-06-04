@@ -40,7 +40,8 @@ const produitSlice = createSlice({
     initialState,
     reducers: {
         ajouterAuPanier: (state, action: PayloadAction<TypeProduit>) => {
-            const produitExistant = state.panier.find(item => item.id === action.payload.id);
+            const produitExistant =
+                state.panier.find(item => item.id === action.payload.id);
 
             if (produitExistant) {
                 produitExistant.quantite += 1;
