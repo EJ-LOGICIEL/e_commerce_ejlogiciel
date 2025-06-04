@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {motion} from 'framer-motion';
 import {FiInfo, FiShoppingCart, FiTrash} from 'react-icons/fi';
@@ -25,6 +25,18 @@ export default function ProduitsPage() {
     const loading: boolean = useSelector(selectLoading);
     const error: string | null = useSelector(selectError);
     const panier: TypeCartItem[] = useSelector(selectPanier);
+
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const [selectedValidite, setSelectedValidite] = useState('all');
+    const validiteOptions: string[] = ["1 ans", "2 ans", "3 ans", "a vie"];
+    const filteredProducts = produits
+        .filter(product =>
+            (selectedValidite === 'all' || product.validite === selectedValidite)
+            &&
+            product.nom.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
 
     useEffect(() => {
         dispatch(fetchProduits());
@@ -52,8 +64,43 @@ export default function ProduitsPage() {
                 Nos Produits
             </h1>
 
+            <div className={'mb-3 flex gap-2 items-center max-w-[40%] mx-auto'}>
+                {/* Barre de recherche */}
+                <div>
+                    <div className="">
+                        <input
+                            type="text"
+                            placeholder="Rechercher un produit..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="px-4 py-2 pr-10 rounded-lg border border-gray-300 inline"
+                        />
+                    </div>
+                </div>
+
+                {/* Filtres */}
+                <div>
+                    <label htmlFor="validite-filter" className="font-semibold text-[#061e53]">
+                        Filtrer par validité
+                    </label>
+                    <select
+                        id="validite-filter"
+                        value={selectedValidite}
+                        onChange={(e) => setSelectedValidite(e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded-md "
+                    >
+                        <option value="all">Tous</option>
+                        {validiteOptions.map((option) => (
+                            <option key={option} value={option}>
+                                {option}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {produits.map((produit: TypeProduit) => (
+                {filteredProducts.map((produit: TypeProduit) => (
                     <motion.div
                         key={produit.id}
                         initial={{opacity: 0, y: 10}}
@@ -63,11 +110,9 @@ export default function ProduitsPage() {
                     >
                         <Image
                             src={produit.image}
-                            width={100}
-                            height={100}
-                            className="rounded-t-lg w-full"
-                            objectFit="cover"
-                            layout="responsive"
+                            width={400}
+                            height={400}
+                            className="rounded-t-lg object-cover w-full h-[200px]"
                             placeholder="blur"
                             blurDataURL={produit.image}
                             quality={100}
@@ -76,7 +121,8 @@ export default function ProduitsPage() {
                             alt={produit.nom}
                         />
 
-                        <div className="mt-[-30px] p-2">
+
+                        <div className="mt-[-20px] p-2">
                             <h2 className="text-lg pt-1 font-semibold text-center text-[#061e53]">
                                 {produit.nom}
                             </h2>
