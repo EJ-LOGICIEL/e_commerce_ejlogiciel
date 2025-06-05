@@ -132,7 +132,7 @@ class Action(models.Model):
     code_action = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.type} - {self.client.nom} - {self.code_action}"
+        return f"{self.type} - {self.client.nom_complet} - {self.code_action}"
 
     def save(self, *args, **kwargs):
         self.code_action = f"EJ-{self.type}-{self._get_pk_val()}"

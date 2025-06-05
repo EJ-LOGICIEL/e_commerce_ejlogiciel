@@ -12,6 +12,7 @@ import {selectCurrentUser} from "@/features/user/userSlice";
 function Header(): React.ReactElement {
     const dispatch: AppDispatch = useDispatch();
     const user: UserState | null = useSelector(selectCurrentUser)
+    console.log('header user', user)
     useEffect(() => {
         dispatch(chargerPanier())
     }, [dispatch])
@@ -34,7 +35,6 @@ function Header(): React.ReactElement {
                 <span className="font-bold">EJ Logiciel</span>
             </div>
 
-            {/* Navigation centrée */}
             <nav className="absolute left-1/2 -translate-x-1/2 hidden md:block space-x-8">
                 <Link href="/" className={navClass}>
                     Accueil
@@ -42,7 +42,7 @@ function Header(): React.ReactElement {
                 <Link href="/produits" className={navClass}>
                     Produits
                 </Link>
-                <Link href={user ? '/mon-complte' : '/se-connecter'} className={navClass}>
+                <Link href={user ? '/mon-compte' : '/se-connecter'} className={navClass}>
                     Mon compte
                 </Link>
             </nav>

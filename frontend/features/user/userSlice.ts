@@ -27,10 +27,14 @@ const userSlice = createSlice({
         ) => {
             state.user = null;
         },
+        updateUser: (state: WritableDraft<AuthState>,
+                     action: PayloadAction<UserState>) => {
+            state.user = action.payload;
+        }
     },
 });
 
-export const {loginUser, logout} = userSlice.actions;
+export const {loginUser, logout, updateUser} = userSlice.actions;
 
 export const selectCurrentUser =
     (state: { user: AuthState }) => state.user.user;

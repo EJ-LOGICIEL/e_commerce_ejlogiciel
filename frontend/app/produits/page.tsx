@@ -3,7 +3,7 @@
 import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {motion} from 'framer-motion';
-import {FiInfo, FiShoppingCart, FiTrash} from 'react-icons/fi';
+import {FiInfo, FiSearch, FiShoppingCart, FiTrash} from 'react-icons/fi';
 import Image from 'next/image';
 import {
     ajouterAuPanier,
@@ -27,20 +27,22 @@ export default function ProduitsPage() {
     const panier: TypeCartItem[] = useSelector(selectPanier);
 
     const [searchQuery, setSearchQuery] = useState('');
-
     const [selectedValidite, setSelectedValidite] = useState('all');
+
     const validiteOptions: string[] = ["1 ans", "2 ans", "3 ans", "a vie"];
-    const filteredProducts = produits
+
+    const filteredProducts: TypeProduit[] = produits
         .filter(product =>
             (selectedValidite === 'all' || product.validite === selectedValidite)
             &&
             product.nom.toLowerCase().includes(searchQuery.toLowerCase())
         );
 
-
     useEffect(() => {
-        dispatch(fetchProduits());
-    }, [dispatch]);
+        if (produits.length === 0) {
+            dispatch(fetchProduits());
+        }
+    }, [dispatch, produits]);
 
     const handleAddToCart = (produit: TypeProduit) => {
         dispatch(ajouterAuPanier(produit));
@@ -48,123 +50,203 @@ export default function ProduitsPage() {
 
     if (error) {
         return (
-            <div className="flex items-center justify-center">
-                <div className="text-red-600 text-center">
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="text-red-600 text-center bg-red-50 p-8 rounded-xl shadow-sm max-w-md">
                     <FiInfo className="mx-auto h-12 w-12 mb-4"/>
                     <p className="text-xl font-semibold">{error}</p>
+                    <button
+                        onClick={() => dispatch(fetchProduits())}
+                        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                        Réessayer
+                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="pt-5 px-4 lg:px-8">
+        <div className="pt-5 px-4 lg:px-8 pb-16">
             {loading && <Loader/>}
-            <h1 className="text-3xl font-bold text-[#061e53] mb-3 text-center">
-                Nos Produits
-            </h1>
 
-            <div className={'mb-3 flex gap-2 items-center max-w-[40%] mx-auto'}>
+            <motion.div
+                initial={{opacity: 0, y: -20}}
+                animate={{opacity: 1, y: 0}}
+                transition={{duration: 0.5}}
+                className="text-center mb-8"
+            >
+                <span
+                    className="inline-block px-4 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-2">
+                    Catalogue
+                </span>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#061e53] to-[#2563eb] text-transparent bg-clip-text mb-3">
+                    Nos Produits
+                </h1>
+                <p className="text-gray-600 max-w-2xl mx-auto">
+                    Découvrez notre sélection de logiciels officiels à prix compétitifs. Tous nos produits sont
+                    authentiques et activables en ligne.
+                </p>
+            </motion.div>
+
+            {/* Filtres */}
+            <motion.div
+                className={'mb-6 flex-col md:flex-row gap-4 items-center justify-center block md:flex'}
+                initial={{opacity: 0, height: 0}}
+                animate={{
+                    opacity: window.innerWidth >= 768 ? 1 : 0,
+                    height: window.innerWidth >= 768 ? 'auto' : 0
+                }}
+                transition={{duration: 0.3}}
+            >
                 {/* Barre de recherche */}
-                <div>
-                    <div className="">
+                <div className="w-full md:w-auto">
+                    <div className="relative">
                         <input
                             type="text"
                             placeholder="Rechercher un produit..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="px-4 py-2 pr-10 rounded-lg border border-gray-300 inline"
+                            className="w-full md:w-64 px-4 py-2 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
+                        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"/>
                     </div>
                 </div>
 
-                {/* Filtres */}
-                <div>
-                    <label htmlFor="validite-filter" className="font-semibold text-[#061e53]">
-                        Filtrer par validité
-                    </label>
-                    <select
-                        id="validite-filter"
-                        value={selectedValidite}
-                        onChange={(e) => setSelectedValidite(e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded-md "
-                    >
-                        <option value="all">Tous</option>
-                        {validiteOptions.map((option) => (
-                            <option key={option} value={option}>
-                                {option}
-                            </option>
-                        ))}
-                    </select>
+                {/* Filtre par validité */}
+                <div className="w-full md:w-auto">
+                    <div className="flex flex-col md:flex-row items-center gap-2">
+                        <label htmlFor="validite-filter" className="font-medium text-[#061e53]">
+                            Filtrer par validité:
+                        </label>
+                        <select
+                            id="validite-filter"
+                            value={selectedValidite}
+                            onChange={(e) => setSelectedValidite(e.target.value)}
+                            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="all">Tous</option>
+                            {validiteOptions.map((option) => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
-            </div>
+            </motion.div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {filteredProducts.map((produit: TypeProduit) => (
-                    <motion.div
-                        key={produit.id}
-                        initial={{opacity: 0, y: 10}}
-                        animate={{opacity: 1, y: 0}}
-                        transition={{duration: 0.5}}
-                        className="flex flex-col bg-white"
-                    >
-                        <Image
-                            src={produit.image}
-                            width={400}
-                            height={400}
-                            className="rounded-t-lg object-cover w-full h-[200px]"
-                            placeholder="blur"
-                            blurDataURL={produit.image}
-                            quality={100}
-                            priority={true}
-                            loading="eager"
-                            alt={produit.nom}
-                        />
+            {/* Grille de produits */}
+            {filteredProducts.length === 0 && !loading ? (
+                <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                    <p className="text-xl font-medium">Aucun produit ne correspond à votre recherche</p>
+                </div>
+            ) : (
+                <div
+                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4
+                    xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+                    {filteredProducts.map((produit: TypeProduit) => (
+                        <motion.div
+                            key={produit.id}
+                            initial={{opacity: 0, y: 20}}
+                            animate={{opacity: 1, y: 0}}
+                            transition={{duration: 0.4}}
+                            className="rounded-xl shadow-sm hover:shadow-md
+                            transition-all duration-300 overflow-hidden flex flex-col h-full"
+                        >
+                            <div className="h-48 sm:h-40 md:h-48 w-full mb-6">
+                                <Image
+                                    src={produit.image}
+                                    width={400}
+                                    height={400}
+                                    className="rounded-t-lg object-cover w-full"
+                                    placeholder="blur"
+                                    blurDataURL={produit.image}
+                                    quality={100}
+                                    priority={true}
+                                    loading="eager"
+                                    alt={produit.nom}
+                                />
 
-
-                        <div className="mt-[-20px] p-2">
-                            <h2 className="text-lg pt-1 font-semibold text-center text-[#061e53]">
-                                {produit.nom}
-                            </h2>
-                            <p className="text-gray-600 pt-1 text-center text-sm">
-                                {produit.description}
-                            </p>
-                            <p className="text-gray-600 pt-1 text-center text-sm">
-                                <span className={'font-semibold'}>Validité:</span>{produit.validite}
-                            </p>
-                            <div className="text-center pt-1 text-sm">
-                                <span className="text-gray-500">Prix: </span>
-                                <span className="font-semibold text-[#061e53]">
-                                    {Number(produit.prix).toLocaleString()} Ar
-                                </span>
                             </div>
-                            {!panier.find(item => item.id === produit.id) ? <motion.button
-                                whileHover={{scale: 1.02}}
-                                whileTap={{scale: 0.98}}
-                                onClick={() => handleAddToCart(produit)}
-                                className="w-full mt-1 py-2 px-3 bg-[#061e53] text-white rounded-full font-medium
-                             flex items-center justify-center space-x-1 hover:bg-[#0c2b7a]
-                             transition-colors duration-200 shadow-md hover:shadow-lg text-sm"
-                            >
-                                <FiShoppingCart className="h-4 w-4"/>
-                                <span>Ajouter au panier</span>
-                            </motion.button> : <motion.button
-                                whileHover={{scale: 1.02}}
-                                whileTap={{scale: 0.98}}
-                                onClick={() => {
-                                    dispatch(retirerDuPanier(produit.id));
-                                }}
-                                className="w-full mt-1 py-2 px-3 bg-red-500 text-white rounded-full font-medium
-                             flex items-center justify-center space-x-1 hover:bg-red-600
-                             transition-colors duration-200 shadow-md hover:shadow-lg text-sm"
-                            >
-                                <FiTrash className="h-4 w-4"/>
-                                <span>Retirer du panier</span>
-                            </motion.button>}
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+
+                            <div className="p-4 flex-grow flex flex-col">
+                                <h2 className="text-lg font-semibold text-[#061e53] mb-1 line-clamp-1">
+                                    {produit.nom}
+                                </h2>
+                                <p className="text-gray-600 text-sm mb-2 line-clamp-2 flex-grow">
+                                    {produit.description}
+                                </p>
+
+                                <div className="mt-auto space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                            Validité: {produit.validite}
+                                        </span>
+                                        <span className="font-bold text-[#061e53]">
+                                            {Number(produit.prix).toLocaleString()} Ar
+                                        </span>
+                                    </div>
+
+                                    {!panier.find(item => item.produit.id === produit.id) ? (
+                                        <motion.button
+                                            whileHover={{scale: 1.02}}
+                                            whileTap={{scale: 0.98}}
+                                            onClick={() => handleAddToCart(produit)}
+                                            className="w-full py-2 px-3 bg-gradient-to-r from-[#061e53] to-[#2563eb] text-white rounded-lg font-medium
+                                                flex items-center justify-center space-x-1 hover:from-[#0c2b7a] hover:to-[#1d4ed8]
+                                                transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+                                        >
+                                            <FiShoppingCart className="h-4 w-4"/>
+                                            <span>Ajouter au panier</span>
+                                        </motion.button>
+                                    ) : (
+                                        <motion.button
+                                            whileHover={{scale: 1.02}}
+                                            whileTap={{scale: 0.98}}
+                                            onClick={() => {
+                                                dispatch(retirerDuPanier(produit.id));
+                                            }}
+                                            className="w-full py-2 px-3 bg-red-500 text-white rounded-lg font-medium
+                                                flex items-center justify-center space-x-1 hover:bg-red-600
+                                                transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+                                        >
+                                            <FiTrash className="h-4 w-4"/>
+                                            <span>Retirer du panier</span>
+                                        </motion.button>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+
+            {/* Pagination (pour une future implémentation) */}
+            {filteredProducts.length > 0 && (
+                <div className="mt-12 flex justify-center">
+                    <nav className="inline-flex rounded-md shadow-sm">
+                        <button
+                            className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            Précédent
+                        </button>
+                        <button
+                            className="px-3 py-1 border-t border-b border-gray-300 bg-blue-50 text-blue-600 font-medium">
+                            1
+                        </button>
+                        <button className="px-3 py-1 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            2
+                        </button>
+                        <button
+                            className="px-3 py-1 border-t border-b border-r border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            3
+                        </button>
+                        <button
+                            className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            Suivant
+                        </button>
+                    </nav>
+                </div>
+            )}
         </div>
     );
 }

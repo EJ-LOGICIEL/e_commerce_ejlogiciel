@@ -16,6 +16,7 @@ from .views import (
     DashboardStatsAPIView,
     UserInfoAPIView,
     UserSignUpAPIView,
+    ListElementAchatDevisAPIView,
 )
 
 urlpatterns = [
@@ -63,4 +64,9 @@ urlpatterns = [
     path("actions/", ActionCreateAPIView.as_view(), name="action-create"),
     # stats
     path("stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
+    path(
+        "elements/",
+        ListElementAchatDevisAPIView.as_view(),
+        name="list-elements-achat-devis",
+    ),
 ]

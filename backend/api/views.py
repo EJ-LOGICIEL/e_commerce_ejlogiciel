@@ -152,7 +152,10 @@ class UserInfoAPIView(APIView):
 
     def get(self, request: Request, *args, **kwargs) -> Response:
         serializer = UserSerializer(request.user)
-        return Response(serializer.data)
+        user_actions = Action.objects.filter(client=request.user)
+        res = serializer.data
+        res["actions"] = ActionSerializer(user_actions, many=True).data
+        return Response(res)
 
 
 @extend_schema(
@@ -514,10 +517,8 @@ class ActionCreateAPIView(APIView):
 
         elements_serializer.save()
 
-        # Préparer les données pour l'email
         cles_selectionnees = {}
 
-        # Pour les achats, attribuer des clés
         if type_action == "ACHAT":
             for item in produits_data:
                 produit_id = item["produit"]
@@ -557,7 +558,6 @@ class ActionCreateAPIView(APIView):
                             "validite": produit.validite,
                         }
                     )
-        # Pour les devis, juste lister les produits sans attribuer de clés
         else:
             for item in produits_data:
                 produit_id = item["produit"]
@@ -679,3 +679,11 @@ class DashboardStatsAPIView(APIView):
                 "top_clients": top_clients,
             }
         )
+
+
+class ListElementAchatDevisAPIView(generics.ListAPIView):
+    permission_classes = [
+        AllowAny,
+    ]
+    queryset = ElementAchatDevis.objects.all()
+    serializer_class = ElementAchatDevisSerializer

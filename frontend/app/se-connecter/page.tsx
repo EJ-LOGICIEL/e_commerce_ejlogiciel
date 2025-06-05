@@ -39,8 +39,8 @@ export default function LoginPage() {
             return
         }
         if (res === 401) {
-            setIsLoading(false);
             setError('Nom d\'utilisateur ou mot de passe incorrect');
+            setIsLoading(false);
             return
         }
         setIsLoading(false);

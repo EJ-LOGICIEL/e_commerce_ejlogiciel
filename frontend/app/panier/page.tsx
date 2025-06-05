@@ -22,7 +22,7 @@ export default function PanierPage() {
     const panier: TypeCartItem[] = useSelector(selectPanier);
 
     const calculerTotal = () => {
-        return panier.reduce((total, item) => total + (item.prix * item.quantite), 0);
+        return panier.reduce((total, item) => total + (item.produit.prix * item.quantite), 0);
     };
 
     const handleAugmenterQuantite = (produitId: number) => {
@@ -73,32 +73,32 @@ export default function PanierPage() {
                 <div className="md:col-span-2 space-y-2">
                     {panier.map((item) => (
                         <motion.div
-                            key={item.id}
+                            key={item.produit.id}
                             initial={{opacity: 0}}
                             animate={{opacity: 1}}
                             exit={{opacity: 0}}
                             className="bg-white p-2 rounded-lg shadow-sm flex items-center gap-2"
                         >
                             <Image
-                                src={item.image}
+                                src={item.produit.image}
                                 width={80}
                                 height={80}
-                                alt={item.nom}
+                                alt={item.produit.nom}
                                 className="rounded-lg object-cover"
                             />
 
                             <div className="flex-grow">
-                                <h3 className="font-semibold text-[#061e53]">{item.nom}</h3>
-                                <p className="text-sm text-gray-500">{item.description}</p>
+                                <h3 className="font-semibold text-[#061e53]">{item.produit.nom}</h3>
+                                <p className="text-sm text-gray-500">{item.produit.description}</p>
                                 <p className="font-medium text-[#061e53]">
-                                    {Number(item.prix).toLocaleString()} Ar
+                                    {Number(item.produit.prix).toLocaleString()} Ar
                                 </p>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <motion.button
                                     whileTap={{scale: 0.95}}
-                                    onClick={() => handleDiminuerQuantite(item.id)}
+                                    onClick={() => handleDiminuerQuantite(item.produit.id)}
                                     className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                                 >
                                     <FiMinus className="h-4 w-4"/>
@@ -108,7 +108,7 @@ export default function PanierPage() {
 
                                 <motion.button
                                     whileTap={{scale: 0.95}}
-                                    onClick={() => handleAugmenterQuantite(item.id)}
+                                    onClick={() => handleAugmenterQuantite(item.produit.id)}
                                     className="p-1 rounded-full bg-gray-100 hover:bg-gray-200"
                                 >
                                     <FiPlus className="h-4 w-4"/>
@@ -116,7 +116,7 @@ export default function PanierPage() {
 
                                 <motion.button
                                     whileTap={{scale: 0.95}}
-                                    onClick={() => handleSupprimerProduit(item.id)}
+                                    onClick={() => handleSupprimerProduit(item.produit.id)}
                                     className="p-1 rounded-full text-red-500 hover:bg-red-50"
                                 >
                                     <FiTrash2 className="h-4 w-4"/>

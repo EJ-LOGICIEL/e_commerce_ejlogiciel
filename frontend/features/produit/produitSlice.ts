@@ -40,20 +40,13 @@ const produitSlice = createSlice({
     initialState,
     reducers: {
         ajouterAuPanier: (state, action: PayloadAction<TypeProduit>) => {
-            const produitExistant =
-                state.panier.find(item => item.id === action.payload.id);
-
-            if (produitExistant) {
-                produitExistant.quantite += 1;
-            } else {
-                state.panier.push({
-                    ...action.payload,
-                    quantite: 1
-                });
-            }
+            state.panier.push({
+                produit: action.payload,
+                quantite: 1
+            });
 
             state.totalPanier = state.panier.reduce((total, item) =>
-                total + (Number(item.prix) * item.quantite), 0
+                total + (Number(item.produit.prix) * item.quantite), 0
             );
 
             localStorage.setItem('panier', JSON.stringify(state.panier));
@@ -61,10 +54,10 @@ const produitSlice = createSlice({
         },
 
         retirerDuPanier: (state, action: PayloadAction<number>) => {
-            state.panier = state.panier.filter(item => item.id !== action.payload);
+            state.panier = state.panier.filter(item => item.produit.id !== action.payload);
 
             state.totalPanier = state.panier.reduce((total, item) =>
-                total + (Number(item.prix) * item.quantite), 0
+                total + (Number(item.produit.prix) * item.quantite), 0
             );
 
             localStorage.setItem('panier', JSON.stringify(state.panier));
@@ -73,20 +66,22 @@ const produitSlice = createSlice({
 
 
         augmenterQuantite: (state, action: PayloadAction<number>) => {
-            const produit = state.panier.find(item => item.id === action.payload);
+            const produit = state
+                .panier.find(item => item.produit.id === action.payload);
             if (produit) {
                 produit.quantite += 1;
                 state.totalPanier = state.panier.reduce((total, item) =>
-                    total + (Number(item.prix) * item.quantite), 0
+                    total + (Number(item.produit.prix) * item.quantite), 0
                 );
                 localStorage.setItem('panier', JSON.stringify(state.panier));
                 localStorage.setItem('totalPanier', state.totalPanier.toString());
             }
         },
         diminuerQuantite: (state, action: PayloadAction<number>) => {
-            const produit = state.panier.find(item => item.id === action.payload);
+            const produit = state.panier
+                .find(item => item.produit.id === action.payload);
             if (produit && produit.quantite === 1) {
-                state.panier = state.panier.filter(item => item.id !== action.payload);
+                state.panier = state.panier.filter(item => item.produit.id !== action.payload);
             }
 
             if (produit && produit.quantite > 1) {
@@ -96,7 +91,7 @@ const produitSlice = createSlice({
 
 
             state.totalPanier = state.panier.reduce((total, item) =>
-                total + (Number(item.prix) * item.quantite), 0
+                total + (Number(item.produit.prix) * item.quantite), 0
             );
 
             localStorage.setItem('panier', JSON.stringify(state.panier));

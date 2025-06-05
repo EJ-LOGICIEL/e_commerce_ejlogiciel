@@ -1,10 +1,14 @@
 'use client';
 import {FaFacebookF, FaLinkedinIn} from 'react-icons/fa';
 import Link from "next/link";
+import {useSelector} from "react-redux";
+import {selectCurrentUser} from "@/features/user/userSlice";
+import {UserState} from "@/utils/types";
 
 export default function Contact() {
+    const user: UserState | null = useSelector(selectCurrentUser)
     return (
-        <footer className="bg-[#f9fafb] text-center text-gray-700 px-6 md:px-20 py-12">
+        <footer className="bg-white text-center text-gray-700 px-6 md:px-20 py-12">
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
 
                 {/* Logo & description */}
@@ -26,9 +30,10 @@ export default function Contact() {
                 <div>
                     <h3 className="font-semibold text-[#061e53] mb-4">Menu</h3>
                     <ul className="space-y-2 text-sm">
-                        <li><Link href="/frontend/public" className="hover:text-[#061e53]">Accueil</Link></li>
+                        <li><Link href="/" className="hover:text-[#061e53]">Accueil</Link></li>
                         <li><Link href="/produits" className="hover:text-[#061e53]">Produits</Link></li>
-                        <li><a href="/se-connecter" className="hover:text-[#061e53]">Mon compte</a></li>
+                        <li><a href={user ? '/mon-complte' : '/se-connecter'} className="hover:text-[#061e53]">Mon
+                            compte</a></li>
                     </ul>
                 </div>
 
