@@ -65,20 +65,18 @@ export default function ProduitsPage() {
         );
     }
 
-    return (
-        <div className="pt-5 px-4 lg:px-8 pb-16">
-            {loading && <Loader/>}
+    if (loading) {
+        return <Loader/>
+    }
 
+    return (
+        <div className="md:mx-auto md:max-w-7xl md:px-6 pt-5 px-4 lg:px-8 pb-16">
             <motion.div
                 initial={{opacity: 0, y: -20}}
                 animate={{opacity: 1, y: 0}}
                 transition={{duration: 0.5}}
                 className="text-center mb-8"
             >
-                <span
-                    className="inline-block px-4 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-2">
-                    Catalogue
-                </span>
                 <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#061e53] to-[#2563eb] text-transparent bg-clip-text mb-3">
                     Nos Produits
                 </h1>
@@ -98,7 +96,6 @@ export default function ProduitsPage() {
                 }}
                 transition={{duration: 0.3}}
             >
-                {/* Barre de recherche */}
                 <div className="w-full md:w-auto">
                     <div className="relative">
                         <input
@@ -138,82 +135,98 @@ export default function ProduitsPage() {
             {/* Grille de produits */}
             {filteredProducts.length === 0 && !loading ? (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                    <FiInfo className="h-12 w-12 mb-4"/>
                     <p className="text-xl font-medium">Aucun produit ne correspond à votre recherche</p>
                 </div>
             ) : (
                 <div
-                    className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4
-                    xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+                    className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4
+                     2xl:grid-cols-6 gap-4 md:gap-6">
                     {filteredProducts.map((produit: TypeProduit) => (
                         <motion.div
                             key={produit.id}
                             initial={{opacity: 0, y: 20}}
                             animate={{opacity: 1, y: 0}}
                             transition={{duration: 0.4}}
-                            className="rounded-xl shadow-sm hover:shadow-md
-                            transition-all duration-300 overflow-hidden flex flex-col h-full"
+                            className="bg-gray-50 rounded-xl shadow-sm hover:shadow-md
+                             transition-all duration-300 overflow-hidden flex flex-col h-full"
                         >
-                            <div className="h-48 sm:h-40 md:h-48 w-full mb-6">
+                            <div
+                                className="relative w-full h-48 sm:h-40 md:h-48 flex items-center
+                                 justify-center overflow-hidden bg-gray-50 rounded-t-xl">
                                 <Image
                                     src={produit.image}
                                     width={400}
                                     height={400}
-                                    className="rounded-t-lg object-cover w-full"
+                                    className="max-h-full max-w-full object-contain p-2"
                                     placeholder="blur"
-                                    blurDataURL={produit.image}
-                                    quality={100}
+                                    blurDataURL="data:image/png;base64,
+                                    iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN88P
+                                    /BfwAJhAPYe0YQ1AAAAABJRU5ErkJggg=="
+                                    quality={90}
                                     priority={true}
-                                    loading="eager"
                                     alt={produit.nom}
                                 />
-
+                                <div
+                                    className="absolute top-2 right-2 bg-gradient-to-r from-[#061e53] to-[#2563eb]
+                                     backdrop-blur-sm text-xs font-medium text-white px-2 py-1 rounded-full shadow-sm">
+                                    {produit.validite}
+                                </div>
                             </div>
 
                             <div className="p-4 flex-grow flex flex-col">
-                                <h2 className="text-lg font-semibold text-[#061e53] mb-1 line-clamp-1">
-                                    {produit.nom}
-                                </h2>
-                                <p className="text-gray-600 text-sm mb-2 line-clamp-2 flex-grow">
-                                    {produit.description}
-                                </p>
+                                <div className="flex-grow">
+                                    <h2 className="text-lg font-semibold text-[#061e53] mb-1 line-clamp-1">
+                                        {produit.nom}
+                                    </h2>
+                                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                                        {produit.description}
+                                    </p>
+                                </div>
 
-                                <div className="mt-auto space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                            Validité: {produit.validite}
-                                        </span>
-                                        <span className="font-bold text-[#061e53]">
+                                <div className="mt-auto space-y-3">
+                                    {/* Prix avec animation */}
+                                    <motion.div
+                                        className="flex justify-between items-center"
+                                        whileHover={{scale: 1.03}}
+                                        transition={{duration: 0.2}}
+                                    >
+                                        <span className="text-sm text-gray-500">Prix</span>
+                                        <span className="font-bold text-lg text-[#061e53]">
                                             {Number(produit.prix).toLocaleString()} Ar
                                         </span>
-                                    </div>
+                                    </motion.div>
 
-                                    {!panier.find(item => item.produit.id === produit.id) ? (
-                                        <motion.button
-                                            whileHover={{scale: 1.02}}
-                                            whileTap={{scale: 0.98}}
-                                            onClick={() => handleAddToCart(produit)}
-                                            className="w-full py-2 px-3 bg-gradient-to-r from-[#061e53] to-[#2563eb] text-white rounded-lg font-medium
-                                                flex items-center justify-center space-x-1 hover:from-[#0c2b7a] hover:to-[#1d4ed8]
-                                                transition-all duration-200 shadow-sm hover:shadow-md text-sm"
-                                        >
-                                            <FiShoppingCart className="h-4 w-4"/>
-                                            <span>Ajouter au panier</span>
-                                        </motion.button>
-                                    ) : (
-                                        <motion.button
-                                            whileHover={{scale: 1.02}}
-                                            whileTap={{scale: 0.98}}
-                                            onClick={() => {
-                                                dispatch(retirerDuPanier(produit.id));
-                                            }}
-                                            className="w-full py-2 px-3 bg-red-500 text-white rounded-lg font-medium
-                                                flex items-center justify-center space-x-1 hover:bg-red-600
-                                                transition-all duration-200 shadow-sm hover:shadow-md text-sm"
-                                        >
-                                            <FiTrash className="h-4 w-4"/>
-                                            <span>Retirer du panier</span>
-                                        </motion.button>
-                                    )}
+                                    {/* Boutons d'action */}
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        {!panier.find(item => item.produit.id === produit.id) ? (
+                                            <motion.button
+                                                whileHover={{scale: 1.02}}
+                                                whileTap={{scale: 0.98}}
+                                                onClick={() => handleAddToCart(produit)}
+                                                className="w-full py-2 px-3 bg-gradient-to-r from-[#061e53] to-[#2563eb] text-white rounded-lg font-medium
+                                                    flex items-center justify-center space-x-1 hover:from-[#0c2b7a] hover:to-[#1d4ed8]
+                                                    transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+                                            >
+                                                <FiShoppingCart className="h-4 w-4 mr-1"/>
+                                                <span className="whitespace-nowrap">Ajouter au panier</span>
+                                            </motion.button>
+                                        ) : (
+                                            <motion.button
+                                                whileHover={{scale: 1.02}}
+                                                whileTap={{scale: 0.98}}
+                                                onClick={() => {
+                                                    dispatch(retirerDuPanier(produit.id));
+                                                }}
+                                                className="w-full py-2 px-3 bg-red-500 text-white rounded-lg font-medium
+                                                    flex items-center justify-center space-x-1 hover:bg-red-600
+                                                    transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+                                            >
+                                                <FiTrash className="h-4 w-4 mr-1"/>
+                                                <span className="whitespace-nowrap">Retirer du panier</span>
+                                            </motion.button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
@@ -226,22 +239,27 @@ export default function ProduitsPage() {
                 <div className="mt-12 flex justify-center">
                     <nav className="inline-flex rounded-md shadow-sm">
                         <button
-                            className="px-3 py-1 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            className="px-3 py-1 rounded-l-md border
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
                             Précédent
                         </button>
                         <button
-                            className="px-3 py-1 border-t border-b border-gray-300 bg-blue-50 text-blue-600 font-medium">
+                            className="px-3 py-1 border-t border-b
+                             border-gray-300 bg-blue-50 text-blue-600 font-medium">
                             1
                         </button>
-                        <button className="px-3 py-1 border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                        <button className="px-3 py-1 border border-gray-300
+                         bg-white text-gray-500 hover:bg-gray-50">
                             2
                         </button>
                         <button
-                            className="px-3 py-1 border-t border-b border-r border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            className="px-3 py-1 border-t border-b border-r
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
                             3
                         </button>
                         <button
-                            className="px-3 py-1 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            className="px-3 py-1 rounded-r-md border
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
                             Suivant
                         </button>
                     </nav>

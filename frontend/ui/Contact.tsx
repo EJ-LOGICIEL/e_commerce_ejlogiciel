@@ -8,8 +8,8 @@ import {UserState} from "@/utils/types";
 export default function Contact() {
     const user: UserState | null = useSelector(selectCurrentUser)
     return (
-        <footer className="bg-white text-center text-gray-700 px-6 md:px-20 py-12">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+        <footer className="bg-white text-center text-gray-700 px-6 md:px-20 py-5">
+            <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-12">
 
                 {/* Logo & description */}
                 <div>
@@ -79,7 +79,7 @@ export default function Contact() {
             </div>
 
             {/* Bottom note */}
-            <div className="mt-12 text-center text-sm text-gray-500 border-t pt-6">
+            <div className="mt-5 text-center text-sm text-gray-500 border-t pt-6">
                 © {new Date().getFullYear()} EJ LOGICIEL. Tous droits réservés.
             </div>
         </footer>

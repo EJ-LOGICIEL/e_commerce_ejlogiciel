@@ -18,7 +18,7 @@ export default function RootLayout({
                 <div>
                     <Header/>
                 </div>
-                <div className='overflow-y-scroll'>
+                <div>
                     <main>{children}</main>
                     <Contact/>
                 </div>

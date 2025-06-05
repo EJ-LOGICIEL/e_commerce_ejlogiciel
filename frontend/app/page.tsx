@@ -1,12 +1,12 @@
 'use client';
 
 import {motion} from 'framer-motion';
-import Image from 'next/image';
 import {IoIosArrowRoundForward} from 'react-icons/io';
 import Link from "next/link";
 import {UserState} from "@/utils/types";
 import {useSelector} from "react-redux";
 import {selectCurrentUser} from "@/features/user/userSlice";
+import Image from 'next/image';
 
 const sectionVariants = {
     hidden: {opacity: 0, y: 40},
@@ -16,10 +16,10 @@ export default function HomePage() {
     const user: UserState | null = useSelector(selectCurrentUser);
 
     return (
-        <main className="text-gray-800 px-6 py-12 space-y-24 max-w-7xl mx-auto">
+        <main className="text-gray-800 px-6 py-12 space-y-5 md:mx-auto md:max-w-6xl md:px-6">
             {/* HERO SECTION */}
             <motion.section
-                className="md:flex items-center justify-between gap-12"
+                className="md:flex items-center justify-end gap-12"
                 initial="hidden"
                 animate="visible"
                 variants={sectionVariants}
@@ -33,7 +33,8 @@ export default function HomePage() {
                         transition={{duration: 0.5, delay: 0.3}}
                     >
                         Bienvenue chez <br/>
-                        <span className="bg-gradient-to-r from-[#061e53] to-[#2563eb] text-transparent bg-clip-text">
+                        <span
+                            className="bg-gradient-to-r md:text-7xl from-[#061e53] to-[#2563eb] text-transparent bg-clip-text">
                             EJ LOGICIEL
                         </span>
                     </motion.h1>
@@ -102,24 +103,26 @@ export default function HomePage() {
                     className="w-full md:w-1/2 flex justify-center mt-10 md:mt-0"
                     initial={{opacity: 0, scale: 0.9}}
                     animate={{opacity: 1, scale: 1}}
-                    transition={{duration: 0.7, delay: 0.3}}
+                    transition={{
+                        duration: 1,
+                        delay: 0.3,
+                    }}
                 >
                     <div className="relative">
                         <div
-                            className="absolute -inset-1 z-[-12]
-                            bg-gradient-to-r from-blue-600
-                             to-indigo-600 rounded-2xl blur opacity-20"></div>
+                            className="absolute -inset-1 z-[-12] bg-gradient-to-r
+                            from-blue-600 to-indigo-600 rounded-2xl blur opacity-20"
+                        ></div>
                         <Image
                             src="/produits/home-product.jpeg"
                             alt="Produit vedette"
                             width={450}
                             height={450}
-                            className="rounded-2xl shadow-2xl object-cover
-                            relative transform hover:scale-[1.02] t
-                            ransition-transform duration-500"
+                            className="rounded-2xl shadow-2xl object-cover relative"
                         />
                     </div>
                 </motion.div>
+
             </motion.section>
 
             {/* POURQUOI CHOISIR EJ LOGICIEL */}

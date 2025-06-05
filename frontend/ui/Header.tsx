@@ -22,7 +22,7 @@ function Header(): React.ReactElement {
     const panier: TypeCartItem[] = useSelector(selectPanier)
     const nombre_produits = panier.reduce((acc, item) => acc + item.quantite, 0);
     return (
-        <header className="mx-auto flex max-w-[85%] items-center justify-between pt-2">
+        <header className="flex items-center justify-between pt-2 md:mx-auto md:max-w-7xl md:px-6">
             {/* Logo à gauche */}
             <div className="flex items-center gap-2">
                 <Img
