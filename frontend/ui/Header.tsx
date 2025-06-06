@@ -24,7 +24,7 @@ function Header(): React.ReactElement {
     return (
         <header className="flex items-center justify-between pt-2 md:mx-auto md:max-w-7xl md:px-6">
             {/* Logo à gauche */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-pointer">
                 <Img
                     src="/ej.jpg"
                     alt="logo-ej-logiciel"

@@ -8,7 +8,7 @@ from drf_spectacular.utils import (
     OpenApiParameter,
 )
 from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -67,6 +67,65 @@ class UserSignUpAPIView(generics.CreateAPIView):
             access_token = str(refresh.access_token)
             res = Response({"token": access_token, "user": UserSerializer(user).data})
         return res
+
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Mise à jour des informations utilisateur",
+    description="Permet à un utilisateur connecté de modifier son numéro de téléphone, email et mot de passe. Le mot de passe actuel est requis pour validation.",
+    request={
+        "application/json": {
+            "example": {
+                "numero_telephone": "0612345678",
+                "email": "nouveau@email.com",
+                "current_password": "mot_de_passe_actuel",
+                "new_password": "nouveau_mot_de_passe",
+                "adresse": "Nouvelle adresse",
+            }
+        }
+    },
+    responses={
+        200: UserSerializer,
+        400: {"description": "Données invalides ou mot de passe incorrect"},
+        401: {"description": "Non authentifié"},
+    },
+)
+class UserUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        data = request.data
+        current_password = data.get("currentPassword")
+        if not current_password or not user.check_password(current_password):
+            return Response(
+                {"error": "Le mot de passe actuel est incorrect."}, status=400
+            )
+
+        update_data = {}
+
+        if "numero_telephone" in data:
+            update_data["numero_telephone"] = data["numero_telephone"]
+
+        if "email" in data:
+            update_data["email"] = data["email"]
+
+        if "adresse" in data:
+            update_data["adresse"] = data["adresse"]
+
+        new_password = data.get("newPassword")
+        if new_password:
+            user.set_password(new_password)
+            user.save()
+
+        if update_data:
+            serializer = UserSerializer(user, data=update_data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response(serializer.errors, status=400)
+
+        return Response(UserSerializer(user).data)
 
 
 @extend_schema(

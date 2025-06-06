@@ -7,19 +7,33 @@ import {motion} from 'framer-motion';
 import {TypeActions, UserState} from "@/utils/types";
 import {AppDispatch} from "@/redux/store";
 import api from "@/lib/apis";
-import {FiCalendar, FiCheck, FiDollarSign, FiLock, FiMapPin, FiPhone, FiShoppingBag, FiUser, FiX} from 'react-icons/fi';
+import {
+    FiCalendar,
+    FiCheck,
+    FiDollarSign,
+    FiLock,
+    FiMail,
+    FiMapPin,
+    FiPhone,
+    FiShoppingBag,
+    FiUser,
+    FiX
+} from 'react-icons/fi';
 
 const MonCompte = () => {
     const user: UserState | null = useSelector(selectCurrentUser);
     const dispatch: AppDispatch = useDispatch();
     const actions: undefined | TypeActions[] = user?.actions
     const [passwordMatch, setPasswordMatch] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         numero_telephone: user?.numero_telephone || '',
+        email: user?.email || '',
         adresse: user?.adresse || '',
-        currentPassword: '',
-        newPassword: '',
+        current_password: '',
+        new_password: '',
         confirmPassword: '',
     });
 
@@ -30,9 +44,9 @@ const MonCompte = () => {
             [name]: value,
         });
 
-        if (name === 'newPassword' || name === 'confirmPassword') {
+        if (name === 'new_password' || name === 'confirmPassword') {
             if (name === 'confirmPassword') {
-                setPasswordMatch(value === formData.newPassword);
+                setPasswordMatch(value === formData.new_password);
             } else {
                 setPasswordMatch(value === formData.confirmPassword || formData.confirmPassword === '');
             }
@@ -41,29 +55,68 @@ const MonCompte = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
 
-        if (formData.newPassword !== formData.confirmPassword) {
-            toast.error('Les mots de passe ne correspondent pas');
+        if (!formData.current_password) {
+            setError('Le mot de passe actuel est requis pour toute modification');
             return;
         }
 
+        if (formData.new_password && formData.new_password !== formData.confirmPassword) {
+            setError('Les nouveaux mots de passe ne correspondent pas');
+            return;
+        }
+
+        const hasChanges =
+            formData.numero_telephone !== user?.numero_telephone ||
+            formData.email !== user?.email ||
+            formData.adresse !== user?.adresse ||
+            formData.new_password;
+
+        if (!hasChanges) {
+            toast.error('Aucune modification détectée');
+            return;
+        }
+
+        setIsLoading(true);
+
         try {
-            const response = await api.post('/user/update/', {
-                ...formData,
-                id: user?.id,
-            });
+            // Préparer les données à envoyer
+            const updateData = {
+                numero_telephone: formData.numero_telephone,
+                email: formData.email,
+                adresse: formData.adresse,
+                current_password: formData.current_password,
+            };
+
+            // Ajouter le nouveau mot de passe s'il est fourni
+            if (formData.new_password) {
+                updateData['new_password'] = formData.new_password;
+            }
+
+            const response = await api.patch('/me/update/', updateData);
 
             dispatch(updateUser(response.data));
             toast.success('Profil mis à jour avec succès');
 
+            // Réinitialiser les champs de mot de passe
             setFormData({
                 ...formData,
-                currentPassword: '',
-                newPassword: '',
+                current_password: '',
+                new_password: '',
                 confirmPassword: '',
             });
+
+            setError(null);
         } catch (error) {
-            toast.error('Erreur lors de la mise à jour du profil');
+            console.error('Erreur lors de la mise à jour:', error);
+            if (error.response && error.response.data && error.response.data.error) {
+                setError(error.response.data.error);
+            } else {
+                setError('Erreur lors de la mise à jour du profil');
+            }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -108,7 +161,7 @@ const MonCompte = () => {
                         </div>
 
                         <div className="flex items-center">
-                            <FiUser className="text-[#061e53] mr-3"/>
+                            <FiMail className="text-[#061e53] mr-3"/>
                             <div>
                                 <label className="text-gray-600 text-sm">Email</label>
                                 <p className="font-medium">{user?.email || 'Non défini'}</p>
@@ -124,8 +177,31 @@ const MonCompte = () => {
                         </div>
                     </div>
 
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                            <div className="flex items-center">
+                                <FiX className="mr-2"/>
+                                <span>{error}</span>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <h2 className="text-xl font-semibold text-[#061e53] mb-4">Modifier mes informations</h2>
+
+                        <div className="flex flex-col">
+                            <label htmlFor="email" className="text-gray-600 flex items-center mb-1">
+                                <FiMail className="mr-2"/> Email
+                            </label>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                            />
+                        </div>
 
                         <div className="flex flex-col">
                             <label htmlFor="numero_telephone" className="text-gray-600 flex items-center mb-1">
@@ -162,28 +238,32 @@ const MonCompte = () => {
 
                             <div className="space-y-4">
                                 <div className="flex flex-col">
-                                    <label htmlFor="currentPassword" className="text-gray-600">
-                                        Mot de passe actuel
+                                    <label htmlFor="current_password" className="text-gray-600">
+                                        Mot de passe actuel <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="password"
-                                        id="currentPassword"
-                                        name="currentPassword"
-                                        value={formData.currentPassword}
+                                        id="current_password"
+                                        name="current_password"
+                                        value={formData.current_password}
                                         onChange={handleInputChange}
                                         className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                        required
                                     />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Requis pour toute modification
+                                    </p>
                                 </div>
 
                                 <div className="flex flex-col">
-                                    <label htmlFor="newPassword" className="text-gray-600">
+                                    <label htmlFor="new_password" className="text-gray-600">
                                         Nouveau mot de passe
                                     </label>
                                     <input
                                         type="password"
-                                        id="newPassword"
-                                        name="newPassword"
-                                        value={formData.newPassword}
+                                        id="new_password"
+                                        name="new_password"
+                                        value={formData.new_password}
                                         onChange={handleInputChange}
                                         className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
                                     />
@@ -224,9 +304,24 @@ const MonCompte = () => {
 
                         <button
                             type="submit"
-                            className="w-full bg-[#061e53] text-white py-2 px-4 rounded-md hover:bg-[#0c2b7a] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#061e53]"
+                            disabled={isLoading}
+                            className={`w-full flex items-center justify-center py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#061e53] ${
+                                isLoading
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-[#061e53] text-white hover:bg-[#0c2b7a]'
+                            }`}
                         >
-                            Enregistrer les modifications
+                            {isLoading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                strokeWidth="4"/>
+                                        <path className="opacity-75" fill="currentColor"
+                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                    </svg>
+                                    Mise à jour en cours...
+                                </>
+                            ) : 'Enregistrer les modifications'}
                         </button>
                     </form>
                 </div>
