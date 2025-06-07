@@ -7,11 +7,14 @@ import {motion} from 'framer-motion';
 import {TypeActions, UserState} from "@/utils/types";
 import {AppDispatch} from "@/redux/store";
 import api from "@/lib/apis";
+import {logout} from '@/lib/auth';
+import {useRouter} from 'next/navigation';
 import {
     FiCalendar,
     FiCheck,
     FiDollarSign,
     FiLock,
+    FiLogOut,
     FiMail,
     FiMapPin,
     FiPhone,
@@ -23,10 +26,17 @@ import {
 const MonCompte = () => {
     const user: UserState | null = useSelector(selectCurrentUser);
     const dispatch: AppDispatch = useDispatch();
+    const router = useRouter();
     const actions: undefined | TypeActions[] = user?.actions
     const [passwordMatch, setPasswordMatch] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const handleLogout = () => {
+        logout();
+        toast.success('Déconnexion réussie');
+        router.push('/se-connecter');
+    };
 
     const [formData, setFormData] = useState({
         numero_telephone: user?.numero_telephone || '',
@@ -146,7 +156,15 @@ const MonCompte = () => {
             animate={{opacity: 1}}
             className="max-w-6xl mx-auto p-4 md:p-6"
         >
-            <h1 className="text-3xl font-bold mb-6 text-[#061e53] border-b pb-2">Mon Compte</h1>
+            <div className="flex justify-between items-center mb-6 border-b pb-2">
+                <h1 className="text-3xl font-bold text-[#061e53]">Mon Compte</h1>
+                <button 
+                    onClick={handleLogout}
+                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                    <FiLogOut className="mr-2" /> Se déconnecter
+                </button>
+            </div>
 
             <div className="flex flex-col md:flex-row gap-6">
                 <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-6">
@@ -420,4 +438,3 @@ const MonCompte = () => {
 };
 
 export default MonCompte;
-

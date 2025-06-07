@@ -109,17 +109,31 @@ class MethodePaiementSerializer(serializers.ModelSerializer):
 
 
 class ElementAchatDevisSerializer(serializers.ModelSerializer):
+    prix_total = serializers.ReadOnlyField()
 
     class Meta:
         model = ElementAchatDevis
         fields = ["id", "action", "produit", "quantite", "prix_total"]
 
     def create(self, validated_data):
+        # Récupérer le produit pour obtenir son prix
+        produit = validated_data.get('produit')
+        quantite = validated_data.get('quantite', 1)
+
+        # Calculer le prix total basé sur le prix du produit et la quantité
+        prix_total = produit.prix * quantite
+        validated_data['prix_total'] = prix_total
+
         element_achat_devis = ElementAchatDevis.objects.create(**validated_data)
         return element_achat_devis
 
 
 class ActionSerializer(serializers.ModelSerializer):
+    elements_details = serializers.SerializerMethodField()
+    client_name = serializers.SerializerMethodField()
+    vendeur_name = serializers.SerializerMethodField()
+    methode_paiement_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Action
         fields = [
@@ -128,14 +142,42 @@ class ActionSerializer(serializers.ModelSerializer):
             "prix",
             "date_action",
             "client",
+            "client_name",
             "vendeur",
+            "vendeur_name",
             "methode_paiement",
+            "methode_paiement_name",
             "code_action",
             "elements",
+            "elements_details",
             "livree",
             "payee",
         ]
-        read_only_fields = ["code_action", "date_action", "elements"]
+        read_only_fields = ["code_action", "date_action", "elements", "elements_details", "client_name", "vendeur_name", "methode_paiement_name"]
+
+    def get_elements_details(self, obj):
+        elements = obj.elements.all()
+        result = []
+        for element in elements:
+            produit = element.produit
+            result.append({
+                "id": element.id,
+                "produit_id": produit.id,
+                "produit_nom": produit.nom,
+                "quantite": element.quantite,
+                "prix_total": float(element.prix_total),
+                "prix_unitaire": float(produit.prix)
+            })
+        return result
+
+    def get_client_name(self, obj):
+        return obj.client.nom_complet if obj.client else None
+
+    def get_vendeur_name(self, obj):
+        return obj.vendeur.nom_complet if obj.vendeur else None
+
+    def get_methode_paiement_name(self, obj):
+        return obj.methode_paiement.nom if obj.methode_paiement else None
 
     def create(self, validated_data):
         action = Action.objects.create(**validated_data)

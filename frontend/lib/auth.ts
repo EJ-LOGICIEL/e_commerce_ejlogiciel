@@ -1,7 +1,7 @@
 import {loginData, UserState} from "@/utils/types";
 import api from "@/lib/apis";
 import {store} from "@/redux/store";
-import {loginUser} from "@/features/user/userSlice";
+import {loginUser, logout as logoutAction} from "@/features/user/userSlice";
 import {AxiosResponse} from "axios";
 import {ACCESS_TOKEN} from "@/utils/constant";
 
@@ -23,5 +23,11 @@ export async function authenticate(data: Partial<UserState & {
         }
         return null
     }
+}
 
+export function logout() {
+    // Remove token from localStorage
+    localStorage.removeItem(ACCESS_TOKEN);
+    // Dispatch logout action to clear user from Redux store
+    store.dispatch(logoutAction());
 }

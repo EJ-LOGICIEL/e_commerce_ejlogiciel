@@ -152,14 +152,16 @@ export default function PanierPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <motion.button
-                                whileHover={{scale: 1.01}}
-                                whileTap={{scale: 0.99}}
-                                className="w-full py-2 bg-[#061e53] text-white rounded-full font-medium
-                                         hover:bg-[#0c2b7a] transition-colors duration-200"
-                            >
-                                Passer la commande
-                            </motion.button>
+                            <Link href="/checkout">
+                                <motion.button
+                                    whileHover={{scale: 1.01}}
+                                    whileTap={{scale: 0.99}}
+                                    className="w-full py-2 bg-[#061e53] text-white rounded-full font-medium
+                                             hover:bg-[#0c2b7a] transition-colors duration-200"
+                                >
+                                    Passer la commande
+                                </motion.button>
+                            </Link>
 
                             <motion.button
                                 whileHover={{scale: 1.01}}

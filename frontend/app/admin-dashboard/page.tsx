@@ -81,11 +81,24 @@ const AdminDashboard = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [keys, setKeys] = useState<Key[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
+  const [elementsAchatDevis, setElementsAchatDevis] = useState<any[]>([]);
+
+  // State for sales statistics
+  const [salesStats, setSalesStats] = useState({
+    totalSales: 0,
+    totalRevenue: 0,
+    paidSales: 0,
+    unpaidSales: 0,
+    deliveredSales: 0,
+    undeliveredSales: 0
+  });
 
   // State for modals
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit'>('add');
   const [currentItem, setCurrentItem] = useState<any>(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productToAdd, setProductToAdd] = useState<{produit_id: number, quantite: number}>({produit_id: 0, quantite: 1});
 
   // Form data for different entities
   const [userForm, setUserForm] = useState<Partial<User>>({});
@@ -93,6 +106,8 @@ const AdminDashboard = () => {
   const [productForm, setProductForm] = useState<Partial<Product>>({});
   const [paymentMethodForm, setPaymentMethodForm] = useState<Partial<PaymentMethod>>({});
   const [keyForm, setKeyForm] = useState<Partial<Key>>({});
+  const [actionForm, setActionForm] = useState<Partial<Action>>({});
+  const [actionProductsForm, setActionProductsForm] = useState<any[]>([]);
 
   // Check if user is admin
   useEffect(() => {
@@ -144,9 +159,46 @@ const AdminDashboard = () => {
           setKeys(response.data);
           break;
         case 'actions':
-          // This endpoint might need to be created in the backend
+          // Fetch actions
           response = await api.get('/actions/');
-          setActions(response.data);
+          const actionsData = response.data;
+          setActions(actionsData);
+
+          // Calculate sales statistics
+          const purchaseActions = actionsData.filter((action: any) => action.type === 'achat');
+          const totalSales = purchaseActions.length;
+          const totalRevenue = purchaseActions.reduce((sum: number, action: any) => sum + parseFloat(action.prix), 0);
+          const paidSales = purchaseActions.filter((action: any) => action.payee).length;
+          const unpaidSales = totalSales - paidSales;
+          const deliveredSales = purchaseActions.filter((action: any) => action.livree).length;
+          const undeliveredSales = totalSales - deliveredSales;
+
+          setSalesStats({
+            totalSales,
+            totalRevenue,
+            paidSales,
+            unpaidSales,
+            deliveredSales,
+            undeliveredSales
+          });
+
+          // Fetch products if not already loaded
+          if (products.length === 0) {
+            try {
+              const productsResponse = await api.get('/produits/');
+              setProducts(productsResponse.data);
+            } catch (err) {
+              console.error('Error loading products:', err);
+            }
+          }
+
+          // Fetch elements for actions
+          try {
+            const elementsResponse = await api.get('/elements/');
+            setElementsAchatDevis(elementsResponse.data);
+          } catch (err) {
+            console.error('Error loading elements:', err);
+          }
           break;
       }
 
@@ -178,6 +230,46 @@ const AdminDashboard = () => {
         break;
       case 'keys':
         setKeyForm({});
+        // Ensure products are loaded for the dropdown
+        if (products.length === 0) {
+          try {
+            const response = await api.get('/produits/');
+            setProducts(response.data);
+          } catch (err) {
+            console.error('Error loading products:', err);
+            toast.error('Erreur lors du chargement des produits');
+          }
+        }
+        break;
+      case 'actions':
+        setActionForm({
+          type: 'achat',
+          prix: 0,
+          livree: false,
+          payee: false,
+        });
+        // Initialize empty products list
+        setActionProductsForm([]);
+
+        // Ensure users and payment methods are loaded for the dropdown
+        if (users.length === 0) {
+          try {
+            const response = await api.get('/users/');
+            setUsers(response.data);
+          } catch (err) {
+            console.error('Error loading users:', err);
+            toast.error('Erreur lors du chargement des utilisateurs');
+          }
+        }
+        if (paymentMethods.length === 0) {
+          try {
+            const response = await api.get('/methode-paiement/');
+            setPaymentMethods(response.data);
+          } catch (err) {
+            console.error('Error loading payment methods:', err);
+            toast.error('Erreur lors du chargement des méthodes de paiement');
+          }
+        }
         // Ensure products are loaded for the dropdown
         if (products.length === 0) {
           try {
@@ -225,6 +317,60 @@ const AdminDashboard = () => {
           }
         }
         break;
+      case 'actions':
+        setActionForm(item);
+
+        // Set products for this action
+        if (item.elements_details) {
+          setActionProductsForm(item.elements_details);
+        } else {
+          // If elements_details is not available, try to find elements from elementsAchatDevis
+          const actionElements = elementsAchatDevis.filter(element => element.action === item.id);
+          const formattedElements = actionElements.map(element => {
+            const product = products.find(p => p.id === element.produit);
+            return {
+              id: element.id,
+              produit_id: element.produit,
+              produit_nom: product ? product.nom : 'Produit inconnu',
+              quantite: element.quantite,
+              prix_total: element.prix_total,
+              prix_unitaire: product ? product.prix : 0
+            };
+          });
+          setActionProductsForm(formattedElements);
+        }
+
+        // Ensure users and payment methods are loaded for the dropdown
+        if (users.length === 0) {
+          try {
+            const response = await api.get('/users/');
+            setUsers(response.data);
+          } catch (err) {
+            console.error('Error loading users:', err);
+            toast.error('Erreur lors du chargement des utilisateurs');
+          }
+        }
+        if (paymentMethods.length === 0) {
+          try {
+            const response = await api.get('/methode-paiement/');
+            setPaymentMethods(response.data);
+          } catch (err) {
+            console.error('Error loading payment methods:', err);
+            toast.error('Erreur lors du chargement des méthodes de paiement');
+          }
+        }
+
+        // Ensure products are loaded for the dropdown
+        if (products.length === 0) {
+          try {
+            const response = await api.get('/produits/');
+            setProducts(response.data);
+          } catch (err) {
+            console.error('Error loading products:', err);
+            toast.error('Erreur lors du chargement des produits');
+          }
+        }
+        break;
     }
 
     setShowModal(true);
@@ -260,6 +406,10 @@ const AdminDashboard = () => {
           await api.delete(`/cles/${id}/`);
           setKeys(keys.filter(key => key.id !== id));
           break;
+        case 'actions':
+          await api.delete(`/actions/${id}/`);
+          setActions(actions.filter(action => action.id !== id));
+          break;
       }
 
       toast.success('Élément supprimé avec succès');
@@ -273,7 +423,8 @@ const AdminDashboard = () => {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
-    const parsedValue = type === 'number' ? parseFloat(value) : value;
+    const parsedValue = type === 'number' ? parseFloat(value) : 
+                        type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
 
     switch (activeTab) {
       case 'users':
@@ -290,6 +441,9 @@ const AdminDashboard = () => {
         break;
       case 'keys':
         setKeyForm({ ...keyForm, [name]: parsedValue });
+        break;
+      case 'actions':
+        setActionForm({ ...actionForm, [name]: parsedValue });
         break;
     }
   };
@@ -347,6 +501,86 @@ const AdminDashboard = () => {
           } else {
             response = await api.put(`/cles/${currentItem.id}/`, keyForm);
             setKeys(keys.map(k => k.id === currentItem.id ? response.data : k));
+          }
+          break;
+        case 'actions':
+          if (modalType === 'add') {
+            // For new actions, we need to create the action first, then add the products
+            response = await api.post('/actions/', actionForm);
+            const newAction = response.data;
+
+            // If we have products, create elements for them
+            if (actionProductsForm.length > 0) {
+              const elementsData = actionProductsForm.map(product => ({
+                action: newAction.id,
+                produit: product.produit_id,
+                quantite: product.quantite,
+                prix_total: product.prix_total
+              }));
+
+              try {
+                // Create elements for the action
+                await Promise.all(elementsData.map(element => 
+                  api.post('/elements/', element)
+                ));
+
+                // Refresh the actions list to get the updated data
+                const actionsResponse = await api.get('/actions/');
+                setActions(actionsResponse.data);
+              } catch (err) {
+                console.error('Error creating elements:', err);
+                toast.error('Erreur lors de la création des éléments');
+              }
+            } else {
+              setActions([...actions, newAction]);
+            }
+          } else {
+            // For existing actions, update the action
+            response = await api.put(`/actions/${currentItem.id}/`, actionForm);
+            const updatedAction = response.data;
+
+            // Get existing elements for this action
+            const existingElements = elementsAchatDevis.filter(element => element.action === currentItem.id);
+
+            // Delete elements that are no longer in the form
+            const elementsToDelete = existingElements.filter(element => 
+              !actionProductsForm.some(product => product.id === element.id)
+            );
+
+            // Update existing elements and create new ones
+            const elementsToUpdateOrCreate = actionProductsForm.map(product => ({
+              id: product.id, // Will be undefined for new elements
+              action: currentItem.id,
+              produit: product.produit_id,
+              quantite: product.quantite,
+              prix_total: product.prix_total
+            }));
+
+            try {
+              // Delete elements
+              await Promise.all(elementsToDelete.map(element => 
+                api.delete(`/elements/${element.id}/`)
+              ));
+
+              // Update or create elements
+              await Promise.all(elementsToUpdateOrCreate.map(element => {
+                if (element.id) {
+                  return api.put(`/elements/${element.id}/`, element);
+                } else {
+                  return api.post('/elements/', element);
+                }
+              }));
+
+              // Refresh the actions list to get the updated data
+              const actionsResponse = await api.get('/actions/');
+              setActions(actionsResponse.data);
+            } catch (err) {
+              console.error('Error updating elements:', err);
+              toast.error('Erreur lors de la mise à jour des éléments');
+
+              // Still update the actions list with the updated action
+              setActions(actions.map(a => a.id === currentItem.id ? updatedAction : a));
+            }
           }
           break;
       }
@@ -459,6 +693,186 @@ const AdminDashboard = () => {
                 />
               </div>
             )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
+              </button>
+            </div>
+          </form>
+        );
+      case 'actions':
+        return (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Type</label>
+              <select
+                name="type"
+                value={actionForm.type || 'achat'}
+                onChange={handleFormChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                <option value="achat">Achat</option>
+                <option value="devis">Devis</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Prix</label>
+              <input
+                type="number"
+                name="prix"
+                value={actionForm.prix || ''}
+                onChange={handleFormChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Client</label>
+              <select
+                name="client"
+                value={actionForm.client || ''}
+                onChange={handleFormChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                <option value="">Sélectionner un client</option>
+                {users.filter(u => u.role === 'client').map(user => (
+                  <option key={user.id} value={user.id}>{user.nom_complet} ({user.username})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Vendeur</label>
+              <select
+                name="vendeur"
+                value={actionForm.vendeur || ''}
+                onChange={handleFormChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">Sélectionner un vendeur (optionnel)</option>
+                {users.filter(u => u.role === 'vendeur' || u.role === 'admin').map(user => (
+                  <option key={user.id} value={user.id}>{user.nom_complet} ({user.username})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Méthode de paiement</label>
+              <select
+                name="methode_paiement"
+                value={actionForm.methode_paiement || ''}
+                onChange={handleFormChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                <option value="">Sélectionner une méthode de paiement</option>
+                {paymentMethods.map(method => (
+                  <option key={method.id} value={method.id}>{method.nom}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Products section */}
+            <div className="mt-6">
+              <h3 className="text-lg font-medium text-gray-900">Produits</h3>
+              <div className="mt-2 border rounded-md p-4">
+                {actionProductsForm.length > 0 ? (
+                  <div className="space-y-4">
+                    {actionProductsForm.map((product, index) => (
+                      <div key={index} className="flex items-center space-x-4 p-2 border rounded-md">
+                        <div className="flex-grow">
+                          <p className="font-medium">{product.produit_nom}</p>
+                          <div className="flex items-center mt-1">
+                            <span className="text-sm text-gray-500">Quantité: {product.quantite}</span>
+                            <span className="text-sm text-gray-500 ml-4">Prix unitaire: {product.prix_unitaire} Ar</span>
+                            <span className="text-sm text-gray-500 ml-4">Prix total: {product.prix_total} Ar</span>
+                          </div>
+                        </div>
+                        {modalType === 'edit' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updatedProducts = [...actionProductsForm];
+                              updatedProducts.splice(index, 1);
+                              setActionProductsForm(updatedProducts);
+
+                              // Recalculate total price
+                              const newTotalPrice = updatedProducts.reduce((sum, p) => sum + p.prix_total, 0);
+                              setActionForm({...actionForm, prix: newTotalPrice});
+                            }}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <FiTrash2 className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">Aucun produit ajouté</p>
+                )}
+
+                {(modalType === 'edit' || modalType === 'add') && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (products.length > 0) {
+                          setProductToAdd({
+                            produit_id: products[0].id,
+                            quantite: 1
+                          });
+                          setShowProductModal(true);
+                        } else {
+                          toast.error('Aucun produit disponible');
+                        }
+                      }}
+                      className="flex items-center text-indigo-600 hover:text-indigo-900"
+                    >
+                      <FiPlus className="mr-1" /> Ajouter un produit
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="payee"
+                name="payee"
+                checked={actionForm.payee || false}
+                onChange={handleFormChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="payee" className="ml-2 block text-sm text-gray-900">
+                Payée
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="livree"
+                name="livree"
+                checked={actionForm.livree || false}
+                onChange={handleFormChange}
+                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              />
+              <label htmlFor="livree" className="ml-2 block text-sm text-gray-900">
+                Livrée
+              </label>
+            </div>
             <div className="flex justify-end">
               <button
                 type="button"
@@ -942,7 +1356,9 @@ const AdminDashboard = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -956,10 +1372,25 @@ const AdminDashboard = () => {
                       {action.type === 'achat' ? 'Achat' : 'Devis'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{action.prix} €</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{action.prix} Ar</td>
                   <td className="px-6 py-4 whitespace-nowrap">{new Date(action.date_action).toLocaleDateString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {users.find(u => u.id === action.client)?.nom_complet || 'N/A'}
+                    {action.client_name || users.find(u => u.id === action.client)?.nom_complet || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4">
+                    {action.elements_details ? (
+                      <div className="max-h-20 overflow-y-auto">
+                        {action.elements_details.map((element: any, index: number) => (
+                          <div key={index} className="mb-1">
+                            <span className="font-medium">{element.produit_nom}</span>
+                            <span className="text-gray-500 ml-2">x{element.quantite}</span>
+                            <span className="text-gray-500 ml-2">{element.prix_total} Ar</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-500">Aucun produit</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -972,6 +1403,20 @@ const AdminDashboard = () => {
                     }`}>
                       {action.livree ? 'Livré' : 'Non livré'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEditItem(action)}
+                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                    >
+                      <FiEdit className="inline" /> Modifier
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(action.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <FiTrash2 className="inline" /> Supprimer
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -995,9 +1440,109 @@ const AdminDashboard = () => {
     );
   }
 
+  // Handle product selection
+  const handleAddProductToAction = () => {
+    if (!productToAdd.produit_id || productToAdd.quantite < 1) {
+      toast.error('Veuillez sélectionner un produit et spécifier une quantité valide');
+      return;
+    }
+
+    const selectedProduct = products.find(p => p.id === productToAdd.produit_id);
+    if (!selectedProduct) {
+      toast.error('Produit non trouvé');
+      return;
+    }
+
+    const prix_total = selectedProduct.prix * productToAdd.quantite;
+
+    const newProduct = {
+      produit_id: selectedProduct.id,
+      produit_nom: selectedProduct.nom,
+      quantite: productToAdd.quantite,
+      prix_unitaire: selectedProduct.prix,
+      prix_total: prix_total
+    };
+
+    const updatedProducts = [...actionProductsForm, newProduct];
+    setActionProductsForm(updatedProducts);
+
+    // Update total price
+    const newTotalPrice = updatedProducts.reduce((sum, p) => sum + p.prix_total, 0);
+    setActionForm({...actionForm, prix: newTotalPrice});
+
+    // Reset and close modal
+    setProductToAdd({produit_id: 0, quantite: 1});
+    setShowProductModal(false);
+
+    toast.success('Produit ajouté');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Tableau de bord administrateur</h1>
+
+      {/* Product Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Ajouter un produit</h2>
+              <button 
+                onClick={() => setShowProductModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FiX className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Produit</label>
+                <select
+                  value={productToAdd.produit_id || ''}
+                  onChange={(e) => setProductToAdd({...productToAdd, produit_id: parseInt(e.target.value)})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                >
+                  <option value="">Sélectionner un produit</option>
+                  {products.map(product => (
+                    <option key={product.id} value={product.id}>{product.nom} - {product.prix} Ar</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Quantité</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={productToAdd.quantite}
+                  onChange={(e) => setProductToAdd({...productToAdd, quantite: parseInt(e.target.value)})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowProductModal(false)}
+                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddProductToAction}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -1060,7 +1605,7 @@ const AdminDashboard = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
           >
-            <FiShoppingCart className="inline mr-2" /> Transactions
+            <FiShoppingCart className="inline mr-2" /> Ventes
           </button>
         </nav>
       </div>
@@ -1072,15 +1617,60 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Add button (not for actions tab) */}
-      {activeTab !== 'actions' && (
-        <div className="mb-4">
-          <button
-            onClick={handleAddItem}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center"
-          >
-            <FiPlus className="mr-2" /> Ajouter
-          </button>
+      {/* Add button */}
+      <div className="mb-4">
+        <button
+          onClick={handleAddItem}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded flex items-center"
+        >
+          <FiPlus className="mr-2" /> Ajouter
+        </button>
+      </div>
+
+      {/* Sales Statistics */}
+      {activeTab === 'actions' && !isLoading && (
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Ventes</h3>
+            <div className="flex justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total</p>
+                <p className="text-2xl font-bold">{salesStats.totalSales}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Chiffre d'affaires</p>
+                <p className="text-2xl font-bold">{salesStats.totalRevenue.toLocaleString()} Ar</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Paiements</h3>
+            <div className="flex justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Payées</p>
+                <p className="text-2xl font-bold text-green-600">{salesStats.paidSales}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Non payées</p>
+                <p className="text-2xl font-bold text-red-600">{salesStats.unpaidSales}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Livraisons</h3>
+            <div className="flex justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Livrées</p>
+                <p className="text-2xl font-bold text-green-600">{salesStats.deliveredSales}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Non livrées</p>
+                <p className="text-2xl font-bold text-red-600">{salesStats.undeliveredSales}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

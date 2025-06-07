@@ -525,6 +525,20 @@ class ActionCreateAPIView(APIView):
                 {"error": "Données incomplètes. Action et produits requis."}, status=400
             )
 
+        # Calculer le prix total basé sur les produits et leurs quantités
+        total_price = 0
+        for item in produits_data:
+            produit_id = item["produit"]
+            quantite = item.get("quantite", 1)
+            try:
+                produit = Produit.objects.get(id=produit_id)
+                total_price += produit.prix * quantite
+            except Produit.DoesNotExist:
+                return Response({"error": f"Produit avec ID {produit_id} n'existe pas."}, status=400)
+
+        # Mettre à jour le prix dans les données de l'action
+        action_data["prix"] = total_price
+
         if type_action not in ["ACHAT", "DEVIS"]:
             return Response(
                 {"error": "Type d'action invalide. Doit être 'ACHAT' ou 'DEVIS'."},
