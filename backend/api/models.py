@@ -30,13 +30,40 @@ class Utilisateur(AbstractUser):
         return self.nom_complet
 
     def save(self, *args, **kwargs):
-
         self.code_utilisateur = f"{self.role}-{self._get_pk_val()}"
         super().save(*args, **kwargs)
+
+        # Create or update Vendeur instance if role is 'vendeur'
+        if self.role == 'vendeur':
+            Vendeur.objects.update_or_create(
+                utilisateur=self,
+                defaults={
+                    'boutique_nom': f"Boutique de {self.nom_complet}",
+                }
+            )
 
     class Meta:
         verbose_name = "Utilisateur"
         verbose_name_plural = "Utilisateurs"
+
+
+class Vendeur(models.Model):
+    utilisateur = models.OneToOneField(Utilisateur, on_delete=models.CASCADE, related_name='vendeur_profile')
+    boutique_nom = models.CharField(max_length=100, default="Ma Boutique")
+    description = models.TextField(blank=True, null=True)
+    logo = models.ImageField(upload_to="vendeurs/logos/", blank=True, null=True)
+    date_inscription = models.DateTimeField(auto_now_add=True)
+    note_moyenne = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
+    nombre_ventes = models.PositiveIntegerField(default=0)
+    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)  # Pourcentage de commission
+    est_verifie = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Vendeur: {self.utilisateur.nom_complet} - {self.boutique_nom}"
+
+    class Meta:
+        verbose_name = "Vendeur"
+        verbose_name_plural = "Vendeurs"
 
 
 class Categorie(models.Model):

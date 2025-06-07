@@ -827,13 +827,19 @@ const AdminDashboard = () => {
                   <div className="mt-4">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         if (products.length > 0) {
+                          // Reset the product form first
                           setProductToAdd({
                             produit_id: products[0].id,
                             quantite: 1
                           });
-                          setShowProductModal(true);
+                          // Use setTimeout to ensure the modal opens after the current event cycle
+                          setTimeout(() => {
+                            setShowProductModal(true);
+                          }, 0);
                         } else {
                           toast.error('Aucun produit disponible');
                         }
@@ -1470,79 +1476,22 @@ const AdminDashboard = () => {
     const newTotalPrice = updatedProducts.reduce((sum, p) => sum + p.prix_total, 0);
     setActionForm({...actionForm, prix: newTotalPrice});
 
-    // Reset and close modal
+    // Reset form
     setProductToAdd({produit_id: 0, quantite: 1});
-    setShowProductModal(false);
 
-    toast.success('Produit ajouté');
+    // Close modal with setTimeout to ensure it happens after the current event cycle
+    setTimeout(() => {
+      setShowProductModal(false);
+      // Show success message after modal is closed
+      toast.success('Produit ajouté');
+    }, 0);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Tableau de bord administrateur</h1>
 
-      {/* Product Modal */}
-      {showProductModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Ajouter un produit</h2>
-              <button 
-                onClick={() => setShowProductModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <FiX className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Produit</label>
-                <select
-                  value={productToAdd.produit_id || ''}
-                  onChange={(e) => setProductToAdd({...productToAdd, produit_id: parseInt(e.target.value)})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                >
-                  <option value="">Sélectionner un produit</option>
-                  {products.map(product => (
-                    <option key={product.id} value={product.id}>{product.nom} - {product.prix} Ar</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Quantité</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={productToAdd.quantite}
-                  onChange={(e) => setProductToAdd({...productToAdd, quantite: parseInt(e.target.value)})}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                />
-              </div>
-
-              <div className="flex justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowProductModal(false)}
-                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddProductToAction}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  Ajouter
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Product Modal - Moved outside other modals with higher z-index */}
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -1702,6 +1651,68 @@ const AdminDashboard = () => {
                     {renderForm()}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Product Modal - Rendered at root level with higher z-index */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Ajouter un produit</h2>
+              <button 
+                onClick={() => setShowProductModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FiX className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Produit</label>
+                <select
+                  value={productToAdd.produit_id || ''}
+                  onChange={(e) => setProductToAdd({...productToAdd, produit_id: parseInt(e.target.value)})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                >
+                  <option value="">Sélectionner un produit</option>
+                  {products.map(product => (
+                    <option key={product.id} value={product.id}>{product.nom} - {product.prix} Ar</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Quantité</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={productToAdd.quantite}
+                  onChange={(e) => setProductToAdd({...productToAdd, quantite: parseInt(e.target.value)})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowProductModal(false)}
+                  className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddProductToAction}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Ajouter
+                </button>
               </div>
             </div>
           </div>

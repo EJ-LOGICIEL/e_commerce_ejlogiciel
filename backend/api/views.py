@@ -24,6 +24,7 @@ from .models import (
     Cle,
     Action,
     ElementAchatDevis,
+    Vendeur,
 )
 from .serializers import (
     UserSerializer,
@@ -33,6 +34,7 @@ from .serializers import (
     ActionSerializer,
     ElementAchatDevisSerializer,
     CleSerializer,
+    VendeurSerializer,
 )
 from .tasks import envoyer_cles_email_async, logger
 
@@ -96,7 +98,7 @@ class UserUpdateAPIView(APIView):
     def patch(self, request, *args, **kwargs):
         user = request.user
         data = request.data
-        current_password = data.get("currentPassword")
+        current_password = data.get("current_password")
         if not current_password or not user.check_password(current_password):
             return Response(
                 {"error": "Le mot de passe actuel est incorrect."}, status=400
@@ -113,7 +115,7 @@ class UserUpdateAPIView(APIView):
         if "adresse" in data:
             update_data["adresse"] = data["adresse"]
 
-        new_password = data.get("newPassword")
+        new_password = data.get("new_password")
         if new_password:
             user.set_password(new_password)
             user.save()
@@ -846,3 +848,93 @@ class ActionRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Action.objects.all()
+
+
+# Vendeurs
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Vendeurs"],
+        summary="Liste tous les vendeurs",
+        description="Retourne une liste de tous les vendeurs enregistrés.",
+    ),
+    create=extend_schema(
+        tags=["Vendeurs"],
+        summary="Crée un nouveau profil vendeur",
+        description="Crée un nouveau profil vendeur (réservé aux administrateurs).",
+    ),
+)
+class VendeurListCreateAPIView(generics.ListCreateAPIView):
+    serializer_class = VendeurSerializer
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAdmin()]
+
+    def get_queryset(self):
+        return Vendeur.objects.all()
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Vendeurs"],
+        summary="Récupère un profil vendeur",
+        description="Récupère les détails d'un profil vendeur spécifique.",
+    ),
+    update=extend_schema(
+        tags=["Vendeurs"],
+        summary="Met à jour un profil vendeur",
+        description="Met à jour les détails d'un profil vendeur (réservé aux administrateurs ou au vendeur concerné).",
+    ),
+    destroy=extend_schema(
+        tags=["Vendeurs"],
+        summary="Supprime un profil vendeur",
+        description="Supprime un profil vendeur (réservé aux administrateurs).",
+    ),
+)
+class VendeurRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = VendeurSerializer
+    lookup_field = "pk"
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        elif self.request.method == "DELETE":
+            return [IsAdmin()]
+        else:  # PUT, PATCH
+            return [IsAdminOrVendeur()]
+
+    def get_queryset(self):
+        return Vendeur.objects.all()
+
+    def check_object_permissions(self, request, obj):
+        super().check_object_permissions(request, obj)
+        # Allow vendors to update only their own profile
+        if request.method in ["PUT", "PATCH"] and request.user.role == "vendeur":
+            if obj.utilisateur != request.user:
+                self.permission_denied(request, message="Vous ne pouvez pas modifier le profil d'un autre vendeur.")
+
+
+@extend_schema(
+    tags=["Vendeurs"],
+    summary="Récupère le profil vendeur de l'utilisateur connecté",
+    description="Récupère les détails du profil vendeur de l'utilisateur connecté (réservé aux vendeurs).",
+    responses={
+        200: VendeurSerializer,
+        403: {"description": "Permission refusée"},
+        404: {"description": "Profil vendeur non trouvé"},
+    },
+)
+class CurrentVendeurProfileAPIView(APIView):
+    permission_classes = [IsVendeur]
+
+    def get(self, request):
+        try:
+            vendeur = Vendeur.objects.get(utilisateur=request.user)
+            serializer = VendeurSerializer(vendeur)
+            return Response(serializer.data)
+        except Vendeur.DoesNotExist:
+            return Response(
+                {"error": "Profil vendeur non trouvé pour cet utilisateur."},
+                status=404
+            )

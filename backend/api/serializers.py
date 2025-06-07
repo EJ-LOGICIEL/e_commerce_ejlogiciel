@@ -8,6 +8,7 @@ from .models import (
     Action,
     MethodePaiement,
     ElementAchatDevis,
+    Vendeur,
 )
 
 
@@ -182,3 +183,41 @@ class ActionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         action = Action.objects.create(**validated_data)
         return action
+
+
+class VendeurSerializer(serializers.ModelSerializer):
+    utilisateur_details = UserSerializer(source='utilisateur', read_only=True)
+    utilisateur_id = serializers.PrimaryKeyRelatedField(
+        source='utilisateur',
+        queryset=Utilisateur.objects.filter(role='vendeur'),
+        write_only=True
+    )
+    nombre_produits = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Vendeur
+        fields = [
+            'id',
+            'utilisateur_id',
+            'utilisateur_details',
+            'boutique_nom',
+            'description',
+            'logo',
+            'date_inscription',
+            'note_moyenne',
+            'nombre_ventes',
+            'commission_rate',
+            'est_verifie',
+            'nombre_produits',
+        ]
+        read_only_fields = ['date_inscription', 'note_moyenne', 'nombre_ventes']
+
+    def get_nombre_produits(self, obj):
+        # This would require adding a ForeignKey from Produit to Vendeur
+        # For now, return 0 as we haven't modified the Produit model yet
+        return 0
+
+    def create(self, validated_data):
+        utilisateur = validated_data.pop('utilisateur')
+        vendeur = Vendeur.objects.create(utilisateur=utilisateur, **validated_data)
+        return vendeur

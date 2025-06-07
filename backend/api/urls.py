@@ -22,6 +22,9 @@ from .views import (
     UserRetrieveUpdateDestroyAPIView,
     ListElementAchatDevisAPIView,
     UserUpdateAPIView,
+    VendeurListCreateAPIView,
+    VendeurRetrieveUpdateDestroyAPIView,
+    CurrentVendeurProfileAPIView,
 )
 
 urlpatterns = [
@@ -88,5 +91,18 @@ urlpatterns = [
         "elements/",
         ListElementAchatDevisAPIView.as_view(),
         name="list-elements-achat-devis",
+    ),
+
+    # Vendeurs
+    path("vendeurs/", VendeurListCreateAPIView.as_view(), name="vendeur-list-create"),
+    path(
+        "vendeurs/<int:pk>/",
+        VendeurRetrieveUpdateDestroyAPIView.as_view(),
+        name="vendeur-retrieve-update-destroy",
+    ),
+    path(
+        "me/vendeur/",
+        CurrentVendeurProfileAPIView.as_view(),
+        name="current-vendeur-profile",
     ),
 ]
