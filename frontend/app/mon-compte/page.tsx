@@ -82,7 +82,7 @@ const MonCompte = () => {
 
         try {
             // Préparer les données à envoyer
-            const updateData = {
+                const updateData: Record<string, string> = {
                 numero_telephone: formData.numero_telephone,
                 email: formData.email,
                 adresse: formData.adresse,
@@ -110,8 +110,17 @@ const MonCompte = () => {
             setError(null);
         } catch (error) {
             console.error('Erreur lors de la mise à jour:', error);
-            if (error.response && error.response.data && error.response.data.error) {
-                setError(error.response.data.error);
+            if (
+                typeof error === 'object' &&
+                error !== null &&
+                'response' in error &&
+                typeof (error as any).response === 'object' &&
+                (error as any).response !== null &&
+                'data' in (error as any).response &&
+                (error as any).response.data &&
+                'error' in (error as any).response.data
+            ) {
+                setError((error as any).response.data.error);
             } else {
                 setError('Erreur lors de la mise à jour du profil');
             }
@@ -411,3 +420,4 @@ const MonCompte = () => {
 };
 
 export default MonCompte;
+

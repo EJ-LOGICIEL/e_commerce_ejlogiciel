@@ -180,7 +180,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 @extend_schema(
     tags=["Authentication"],
-    summary="Rafraîchir le token JWT",
     description="Utilise le refresh token pour obtenir un nouveau token d'accès.",
     responses={
         200: {"type": "object", "properties": {"access": {"type": "string"}}},
@@ -345,7 +344,7 @@ class CleListCreateAPIView(generics.ListCreateAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [IsVendeur()]
+            return [AllowAny()]
         return [IsAdmin()]
 
     def get_queryset(self):
@@ -375,7 +374,7 @@ class RetrieveUpdateDestroyCleAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_permissions(self):
         if self.request.method == "GET":
-            return [IsVendeur()]
+            return [AllowAny()]
         return [IsAdmin()]
 
     def get_queryset(self):
@@ -746,3 +745,90 @@ class ListElementAchatDevisAPIView(generics.ListAPIView):
     ]
     queryset = ElementAchatDevis.objects.all()
     serializer_class = ElementAchatDevisSerializer
+
+
+# Users CRUD
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Users"],
+        summary="Liste tous les utilisateurs",
+        description="Retourne une liste de tous les utilisateurs (réservé aux administrateurs).",
+    ),
+    create=extend_schema(
+        tags=["Users"],
+        summary="Crée un nouvel utilisateur",
+        description="Crée un nouvel utilisateur (réservé aux administrateurs).",
+    ),
+)
+class UserListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = [IsAdmin]
+    queryset = Utilisateur.objects.all()
+    serializer_class = UserSerializer
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Users"],
+        summary="Récupère un utilisateur",
+        description="Récupère les détails d'un utilisateur spécifique (réservé aux administrateurs).",
+    ),
+    update=extend_schema(
+        tags=["Users"],
+        summary="Met à jour un utilisateur",
+        description="Met à jour les détails d'un utilisateur (réservé aux administrateurs).",
+    ),
+    destroy=extend_schema(
+        tags=["Users"],
+        summary="Supprime un utilisateur",
+        description="Supprime un utilisateur (réservé aux administrateurs).",
+    ),
+)
+class UserRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAdmin]
+    queryset = Utilisateur.objects.all()
+    serializer_class = UserSerializer
+    lookup_field = "pk"
+
+
+# Actions CRUD (extend existing ActionCreateAPIView)
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Actions"],
+        summary="Liste toutes les actions",
+        description="Retourne une liste de toutes les actions (achats et devis).",
+    ),
+)
+class ActionListAPIView(generics.ListAPIView):
+    permission_classes = [IsAdminOrVendeur]
+    queryset = Action.objects.all()
+    serializer_class = ActionSerializer
+
+
+@extend_schema_view(
+    retrieve=extend_schema(
+        tags=["Actions"],
+        summary="Récupère une action",
+        description="Récupère les détails d'une action spécifique.",
+    ),
+    update=extend_schema(
+        tags=["Actions"],
+        summary="Met à jour une action",
+        description="Met à jour les détails d'une action (réservé aux administrateurs et vendeurs).",
+    ),
+    destroy=extend_schema(
+        tags=["Actions"],
+        summary="Supprime une action",
+        description="Supprime une action (réservé aux administrateurs).",
+    ),
+)
+class ActionRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ActionSerializer
+    lookup_field = "pk"
+
+    def get_permissions(self):
+        if self.request.method == "DELETE":
+            return [IsAdmin()]
+        return [IsAdminOrVendeur()]
+
+    def get_queryset(self):
+        return Action.objects.all()

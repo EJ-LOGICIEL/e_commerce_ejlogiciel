@@ -45,6 +45,11 @@ function Header(): React.ReactElement {
                 <Link href={user ? '/mon-compte' : '/se-connecter'} className={navClass}>
                     Mon compte
                 </Link>
+                {user && user.role === 'admin' && (
+                    <Link href="/admin-dashboard" className={navClass}>
+                        Admin
+                    </Link>
+                )}
             </nav>
 
             {/* Panier à droite */}

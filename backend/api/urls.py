@@ -13,9 +13,13 @@ from .views import (
     CleListCreateAPIView,
     RetrieveUpdateDestroyCleAPIView,
     ActionCreateAPIView,
+    ActionListAPIView,
+    ActionRetrieveUpdateDestroyAPIView,
     DashboardStatsAPIView,
     UserInfoAPIView,
     UserSignUpAPIView,
+    UserListCreateAPIView,
+    UserRetrieveUpdateDestroyAPIView,
     ListElementAchatDevisAPIView,
     UserUpdateAPIView,
 )
@@ -63,8 +67,21 @@ urlpatterns = [
         MethodePaiementDetailAPIView.as_view(),
         name="methode-paiement-detail",
     ),
-    # action
-    path("actions/", ActionCreateAPIView.as_view(), name="action-create"),
+    # Users
+    path("users/", UserListCreateAPIView.as_view(), name="user-list-create"),
+    path(
+        "users/<int:pk>/",
+        UserRetrieveUpdateDestroyAPIView.as_view(),
+        name="user-retrieve-update-destroy",
+    ),
+    # Actions
+    path("actions/", ActionListAPIView.as_view(), name="action-list"),
+    path("actions/create/", ActionCreateAPIView.as_view(), name="action-create"),
+    path(
+        "actions/<int:pk>/",
+        ActionRetrieveUpdateDestroyAPIView.as_view(),
+        name="action-retrieve-update-destroy",
+    ),
     # stats
     path("stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
     path(

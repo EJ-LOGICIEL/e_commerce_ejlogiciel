@@ -82,7 +82,7 @@ class Cle(models.Model):
 
     contenue = models.CharField(max_length=100)
     produit = models.ForeignKey(
-        Produit, on_delete=models.CASCADE, related_name="produits"
+        Produit, on_delete=models.CASCADE, related_name="cles"
     )
     disponiblite = models.BooleanField(default=True)
     code_cle = models.CharField(max_length=50, null=True, blank=True)

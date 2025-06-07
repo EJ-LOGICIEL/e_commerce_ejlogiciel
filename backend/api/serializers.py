@@ -75,6 +75,7 @@ class ProduitSerializer(serializers.ModelSerializer):
 
 
 class CleSerializer(serializers.ModelSerializer):
+    validite = serializers.SerializerMethodField()
 
     class Meta:
         model = Cle
@@ -88,6 +89,9 @@ class CleSerializer(serializers.ModelSerializer):
         ]
 
     extra_kwargs = {"code_cle": {"write_only": True}}
+
+    def get_validite(self, obj):
+        return obj.produit.validite
 
     def create(self, validated_data):
         cle = Cle.objects.create(**validated_data)
