@@ -104,6 +104,7 @@ const AdminDashboard = () => {
   const [userForm, setUserForm] = useState<Partial<User>>({});
   const [categoryForm, setCategoryForm] = useState<Partial<Category>>({});
   const [productForm, setProductForm] = useState<Partial<Product>>({});
+    const [productImage, setProductImage] = useState<File | null>(null);
   const [paymentMethodForm, setPaymentMethodForm] = useState<Partial<PaymentMethod>>({});
   const [keyForm, setKeyForm] = useState<Partial<Key>>({});
   const [actionForm, setActionForm] = useState<Partial<Action>>({});
@@ -224,6 +225,7 @@ const AdminDashboard = () => {
         break;
       case 'products':
         setProductForm({});
+        setProductImage(null);
         break;
       case 'payment-methods':
         setPaymentMethodForm({});
@@ -300,6 +302,7 @@ const AdminDashboard = () => {
         break;
       case 'products':
         setProductForm(item);
+        setProductImage(null);
         break;
       case 'payment-methods':
         setPaymentMethodForm(item);
@@ -448,6 +451,12 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setProductImage(e.target.files[0]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -477,13 +486,44 @@ const AdminDashboard = () => {
           }
           break;
         case 'products':
-          if (modalType === 'add') {
-            response = await api.post('/produits/', productForm);
-            setProducts([...products, response.data]);
+          if (modalType === 'add' || productImage) {
+            // Use FormData for file uploads
+            const formData = new FormData();
+
+            // Add all product form fields to FormData
+            Object.entries(productForm).forEach(([key, value]) => {
+              if (value !== undefined && value !== null) {
+                formData.append(key, value.toString());
+              }
+            });
+
+            // Add image file if it exists
+            if (productImage) {
+              formData.append('image', productImage);
+            }
+
+            if (modalType === 'add') {
+              response = await api.post('/produits/', formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+              setProducts([...products, response.data]);
+            } else {
+              response = await api.put(`/produits/${currentItem.id}/`, formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+              setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
+            }
           } else {
+            // No image change, use regular JSON request
             response = await api.put(`/produits/${currentItem.id}/`, productForm);
             setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
           }
+          // Reset product image state
+          setProductImage(null);
           break;
         case 'payment-methods':
           if (modalType === 'add') {
@@ -1025,10 +1065,29 @@ const AdminDashboard = () => {
                 required
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Image du produit</label>
+              <input
+                type="file"
+                name="image"
+                onChange={handleFileChange}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                accept="image/*"
+                required={modalType === 'add'}
+              />
+              {modalType === 'edit' && productForm.image && !productImage && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-500">Image actuelle: {productForm.image.split('/').pop()}</p>
+                </div>
+              )}
+            </div>
             <div className="flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setProductImage(null);
+                }}
                 className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
                 Annuler
