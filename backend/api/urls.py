@@ -25,6 +25,7 @@ from .views import (
     VendeurListCreateAPIView,
     VendeurRetrieveUpdateDestroyAPIView,
     CurrentVendeurProfileAPIView,
+    ApprouverAchatAPIView,
 )
 
 urlpatterns = [
@@ -85,6 +86,11 @@ urlpatterns = [
         ActionRetrieveUpdateDestroyAPIView.as_view(),
         name="action-retrieve-update-destroy",
     ),
+    path(
+        "actions/<int:action_id>/approuver/",
+        ApprouverAchatAPIView.as_view(),
+        name="action-approuver",
+    ),
     # stats
     path("stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
     path(
@@ -92,7 +98,6 @@ urlpatterns = [
         ListElementAchatDevisAPIView.as_view(),
         name="list-elements-achat-devis",
     ),
-
     # Vendeurs
     path("vendeurs/", VendeurListCreateAPIView.as_view(), name="vendeur-list-create"),
     path(

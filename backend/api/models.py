@@ -34,12 +34,12 @@ class Utilisateur(AbstractUser):
         super().save(*args, **kwargs)
 
         # Create or update Vendeur instance if role is 'vendeur'
-        if self.role == 'vendeur':
+        if self.role == "vendeur":
             Vendeur.objects.update_or_create(
                 utilisateur=self,
                 defaults={
-                    'boutique_nom': f"Boutique de {self.nom_complet}",
-                }
+                    "boutique_nom": f"Boutique de {self.nom_complet}",
+                },
             )
 
     class Meta:
@@ -48,14 +48,18 @@ class Utilisateur(AbstractUser):
 
 
 class Vendeur(models.Model):
-    utilisateur = models.OneToOneField(Utilisateur, on_delete=models.CASCADE, related_name='vendeur_profile')
+    utilisateur = models.OneToOneField(
+        Utilisateur, on_delete=models.CASCADE, related_name="vendeur_profile"
+    )
     boutique_nom = models.CharField(max_length=100, default="Ma Boutique")
     description = models.TextField(blank=True, null=True)
     logo = models.ImageField(upload_to="vendeurs/logos/", blank=True, null=True)
     date_inscription = models.DateTimeField(auto_now_add=True)
     note_moyenne = models.DecimalField(max_digits=3, decimal_places=1, default=0.0)
     nombre_ventes = models.PositiveIntegerField(default=0)
-    commission_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)  # Pourcentage de commission
+    commission_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, default=10.00
+    )  # Pourcentage de commission
     est_verifie = models.BooleanField(default=False)
 
     def __str__(self):
@@ -108,9 +112,7 @@ class Produit(models.Model):
 class Cle(models.Model):
 
     contenue = models.CharField(max_length=100)
-    produit = models.ForeignKey(
-        Produit, on_delete=models.CASCADE, related_name="cles"
-    )
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="cles")
     disponiblite = models.BooleanField(default=True)
     code_cle = models.CharField(max_length=50, null=True, blank=True)
 
@@ -138,6 +140,7 @@ class Action(models.Model):
 
     type = models.CharField(max_length=10, choices=CHOIX_TYPE)
     prix = models.DecimalField(max_digits=10, decimal_places=2)
+    commentaire = models.TextField(null=True, blank=True)
     date_action = models.DateTimeField(auto_now_add=True)
     livree = models.BooleanField(default=False)
     payee = models.BooleanField(default=False)

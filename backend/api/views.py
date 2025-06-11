@@ -36,7 +36,7 @@ from .serializers import (
     CleSerializer,
     VendeurSerializer,
 )
-from .tasks import envoyer_cles_email_async, logger
+from .tasks import envoyer_cles_email_async
 
 
 # Authentification
@@ -488,7 +488,7 @@ class MethodePaiementDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 @extend_schema(
     tags=["Actions"],
     summary="Crée une nouvelle action (achat ou devis)",
-    description="Crée une nouvelle action (achat ou devis), attribue des clés pour les achats et envoie un email.",
+    description="Crée une nouvelle action (achat ou devis). Pour les achats, vérifie la disponibilité des clés mais ne les attribue pas encore.",
     request={
         "application/json": {
             "example": {
@@ -519,7 +519,6 @@ class ActionCreateAPIView(APIView):
     def post(self, request: Request, *args, **kwargs) -> Response:
         action_data = request.data.get("action")
         type_action = action_data.get("type", "").upper()
-        print(type_action)
         produits_data = request.data.get("produits")
 
         if not action_data or not produits_data:
@@ -527,27 +526,12 @@ class ActionCreateAPIView(APIView):
                 {"error": "Données incomplètes. Action et produits requis."}, status=400
             )
 
-        # Calculer le prix total basé sur les produits et leurs quantités
-        total_price = 0
-        for item in produits_data:
-            produit_id = item["produit"]
-            quantite = item.get("quantite", 1)
-            try:
-                produit = Produit.objects.get(id=produit_id)
-                total_price += produit.prix * quantite
-            except Produit.DoesNotExist:
-                return Response({"error": f"Produit avec ID {produit_id} n'existe pas."}, status=400)
-
-        # Mettre à jour le prix dans les données de l'action
-        action_data["prix"] = total_price
-
         if type_action not in ["ACHAT", "DEVIS"]:
             return Response(
                 {"error": "Type d'action invalide. Doit être 'ACHAT' ou 'DEVIS'."},
                 status=400,
             )
 
-        # Préchargement des produits en une seule requête
         produit_ids = [item["produit"] for item in produits_data]
         produits_map = {
             str(p.id): p for p in Produit.objects.filter(id__in=produit_ids)
@@ -556,18 +540,12 @@ class ActionCreateAPIView(APIView):
         if len(produits_map) != len(produit_ids):
             return Response({"error": "Certains produits n'existent pas."}, status=400)
 
-        action_serializer = ActionSerializer(data=action_data)
-        if not action_serializer.is_valid():
-            return Response(action_serializer.errors, status=400)
-
-        # Pour les achats, vérifier la disponibilité des clés
         if type_action == "ACHAT":
             for item in produits_data:
                 produit_id = item["produit"]
                 produit = produits_map[str(produit_id)]
                 quantite = item.get("quantite", 1)
 
-                # Compter les clés disponibles pour ce produit
                 count = Cle.objects.filter(produit=produit, disponiblite=True).count()
                 if count < quantite:
                     return Response(
@@ -577,6 +555,13 @@ class ActionCreateAPIView(APIView):
                         },
                         status=400,
                     )
+
+        action_data["livree"] = False
+        action_data["payee"] = False
+
+        action_serializer = ActionSerializer(data=action_data)
+        if not action_serializer.is_valid():
+            return Response(action_serializer.errors, status=400)
 
         action = action_serializer.save(vendeur=request.user)
 
@@ -591,48 +576,10 @@ class ActionCreateAPIView(APIView):
 
         elements_serializer.save()
 
-        cles_selectionnees = {}
+        if type_action == "DEVIS":
+            client = Utilisateur.objects.get(id=action_data["client"])
+            cles_selectionnees = {}
 
-        if type_action == "ACHAT":
-            for item in produits_data:
-                produit_id = item["produit"]
-                produit = produits_map[str(produit_id)]
-                quantite = item.get("quantite", 1)
-
-                cles = Cle.objects.select_for_update().filter(
-                    produit=produit, disponiblite=True
-                )[:quantite]
-
-                cles_list = list(cles)
-
-                if len(cles_list) < quantite:
-                    logger.error(
-                        f"Race condition détectée: clés pour {produit.nom} non disponibles"
-                    )
-                    return Response(
-                        {
-                            "error": f"Pas assez de clés disponibles pour {produit.nom}. "
-                            f"Seulement {len(cles_list)} disponible(s) pour {quantite} demandée(s)."
-                        },
-                        status=400,
-                    )
-
-                if produit.nom not in cles_selectionnees:
-                    cles_selectionnees[produit.nom] = []
-
-                cle_ids = [cle.id for cle in cles_list]
-                Cle.objects.filter(id__in=cle_ids).update(disponiblite=False)
-
-                for cle in cles_list:
-                    cles_selectionnees[produit.nom].append(
-                        {
-                            "id": cle.id,
-                            "contenue": cle.contenue,
-                            "code_cle": cle.code_cle,
-                            "validite": produit.validite,
-                        }
-                    )
-        else:
             for item in produits_data:
                 produit_id = item["produit"]
                 produit = produits_map[str(produit_id)]
@@ -650,21 +597,103 @@ class ActionCreateAPIView(APIView):
                         }
                     )
 
-        client = Utilisateur.objects.get(id=action_data["client"])
+            envoyer_cles_email_async.delay(
+                client_id=client.id, action_id=action.id, cles_data=cles_selectionnees
+            )
 
-        envoyer_cles_email_async.delay(
-            client_id=client.id, action_id=action.id, cles_data=cles_selectionnees
-        )
-
-        message = "Action créée avec succès. "
-        if type_action == "ACHAT":
-            message += "Les clés ont été envoyées par email."
+            message = "Devis créé avec succès. Le devis a été envoyé par email."
         else:
-            message += "Le devis a été envoyé par email."
+            message = "Achat créé avec succès. En attente d'approbation."
 
         return Response(
             {
                 "detail": message,
+                "action_id": action.id,
+            }
+        )
+
+
+@extend_schema(
+    tags=["Actions"],
+    summary="Approuve un achat et envoie les clés",
+    description="Approuve un achat en marquant livree et payee comme true, attribue des clés et envoie un email avec les clés et la facture.",
+    request={"application/json": {"example": {"livree": True, "payee": True}}},
+    responses={
+        200: {"description": "Achat approuvé avec succès et clés envoyées"},
+        400: {"description": "Données invalides ou pas assez de clés disponibles"},
+        401: {"description": "Non authentifié"},
+        403: {"description": "Permission refusée"},
+        404: {"description": "Action non trouvée"},
+    },
+)
+class ApprouverAchatAPIView(APIView):
+    permission_classes = [IsAdminOrVendeur]
+
+    @transaction.atomic
+    def post(self, request: Request, action_id: int) -> Response:
+        try:
+            action = Action.objects.get(id=action_id, type="achat")
+        except Action.DoesNotExist:
+            return Response(
+                {"error": "Achat non trouvé ou l'action n'est pas un achat."},
+                status=404,
+            )
+
+        if action.livree and action.payee:
+            return Response({"error": "Cet achat a déjà été approuvé."}, status=400)
+
+        action.livree = request.data.get("livree", True)
+        action.payee = request.data.get("payee", True)
+        action.save()
+
+        elements = ElementAchatDevis.objects.filter(action=action)
+
+        cles_selectionnees = {}
+
+        for element in elements:
+            produit = element.produit
+            quantite = element.quantite
+
+            cles = Cle.objects.select_for_update().filter(
+                produit=produit, disponiblite=True
+            )[:quantite]
+
+            cles_list = list(cles)
+
+            if len(cles_list) < quantite:
+                return Response(
+                    {
+                        "error": f"Pas assez de clés disponibles pour {produit.nom}. "
+                        f"Seulement {len(cles_list)} disponible(s) pour {quantite} demandée(s)."
+                    },
+                    status=400,
+                )
+
+            if produit.nom not in cles_selectionnees:
+                cles_selectionnees[produit.nom] = []
+
+            cle_ids = [cle.id for cle in cles_list]
+            Cle.objects.filter(id__in=cle_ids).update(disponiblite=False)
+
+            for cle in cles_list:
+                cles_selectionnees[produit.nom].append(
+                    {
+                        "id": cle.id,
+                        "contenue": cle.contenue,
+                        "code_cle": cle.code_cle,
+                        "validite": produit.validite,
+                    }
+                )
+
+        envoyer_cles_email_async.delay(
+            client_id=action.client.id,
+            action_id=action.id,
+            cles_data=cles_selectionnees,
+        )
+
+        return Response(
+            {
+                "detail": "Achat approuvé avec succès. Les clés ont été envoyées par email.",
                 "action_id": action.id,
                 "cles": cles_selectionnees,
             }
@@ -912,7 +941,10 @@ class VendeurRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView)
         # Allow vendors to update only their own profile
         if request.method in ["PUT", "PATCH"] and request.user.role == "vendeur":
             if obj.utilisateur != request.user:
-                self.permission_denied(request, message="Vous ne pouvez pas modifier le profil d'un autre vendeur.")
+                self.permission_denied(
+                    request,
+                    message="Vous ne pouvez pas modifier le profil d'un autre vendeur.",
+                )
 
 
 @extend_schema(
@@ -935,6 +967,5 @@ class CurrentVendeurProfileAPIView(APIView):
             return Response(serializer.data)
         except Vendeur.DoesNotExist:
             return Response(
-                {"error": "Profil vendeur non trouvé pour cet utilisateur."},
-                status=404
+                {"error": "Profil vendeur non trouvé pour cet utilisateur."}, status=404
             )
