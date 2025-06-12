@@ -6,10 +6,9 @@ const api: AxiosInstance = axios.create({
     withCredentials: true,
 });
 
-// Intercepteur pour les requêtes - ajoute le token d'authentification
 api.interceptors.request.use(
     config => {
-        const token: string | null = localStorage.getItem(ACCESS_TOKEN);
+        const token: string | null = sessionStorage.getItem(ACCESS_TOKEN);
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -20,19 +19,16 @@ api.interceptors.request.use(
     }
 );
 
-// Intercepteur pour les réponses - gestion des erreurs
-api.interceptors.response.use(
-    response => response,
-    error => {
-        // Gestion des erreurs 401 (non autorisé)
-        if (error.response && error.response.status === 401) {
-            // Rediriger vers la page de connexion si nécessaire
-            if (typeof window !== 'undefined') {
-                window.location.href = '/se-connecter';
-            }
-        }
-        return Promise.reject(error);
-    }
-);
+export const refreshToken = async () => {
+    try {
+        const response = await api.post("/refresh/");
+        const newToken: string = response.data.access;
+        sessionStorage.setItem(ACCESS_TOKEN, newToken)
+        return newToken;
+    } catch (error) {
+        console.error("Failed to refresh token", error);
+        return null;
 
+    }
+}
 export default api;

@@ -7,7 +7,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiY
   "action": {
     "type": "achat",
     "prix": 500,
-    "commentaire": "eeee",
+    "commentaire": "",
     "client": 26,
     "methode_paiement": 1
   },
@@ -26,8 +26,8 @@ POST http://localhost:8001/api/token/
 Content-Type: application/json
 
 {
-  "username": "romeomanoela",
-  "password": "321"
+  "username": "test_admin",
+  "password": "123"
 }
 
 ### register
@@ -48,8 +48,6 @@ Content-Type: application/json
 GET http://localhost:8001/api/me/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5MTMyNTI2LCJpYXQiOjE3NDg5NDgwNzgsImp0aSI6IjdkYTVhYzZiNGI1NTRiOGFiNGZjNTg1ZjIwMDJmZTVmIiwidXNlcl9pZCI6Nn0.LB-FWVK4ucReitRu3ocfBUg0apF3IQtLLa8pvhtruPs
 
-### Lister produit
-GET http://localhost:8001/api/produits/
 
 ### Update User:
 PATCH http://localhost:8001/api/me/update/
@@ -64,6 +62,10 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiY
 ### list produits
 GET http://localhost:8001/api/produits/
 
-### approuver
-POST http://localhost:8001/api/actions/35/approuver/
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5NzAyMjg0LCJpYXQiOjE3NDk2NjkxODksImp0aSI6IjA3YzdkMGQ1Zjg4NzQ3MjA4OTk3NTQxMmY0M2I3NDcyIiwidXNlcl9pZCI6MjV9.U5-_N0KgG6ia1qgxUmRegiscunp7MI-w9wWHQvzrslw
+###  approuver
+POST http://localhost:8001/api/actions/39/approuver/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5NzM4OTA5LCJpYXQiOjE3NDk3MzUzMDksImp0aSI6IjU1MmFiMWM0M2QzNTQ0NTQ4NGI3MDkzODgyYzkzMTY4IiwidXNlcl9pZCI6MjV9.-fX7pgubY97frYcN0nnrj7TslTwwQlv6Bp6p7dNI2vI
+
+### actions
+GET 127.0.0.1:8001/api/me/actions/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzQ5NzQyNTAwLCJpYXQiOjE3NDk3Mzg5MDAsImp0aSI6ImM3OTBlMjM4YmNhMjRkYzhiOTgzZGExODc0Mzc3NDFlIiwidXNlcl9pZCI6MjV9.4PZwRfFsU1dZdMD9DblNLVrjENruBjyCBmYKw_oFB_Y

@@ -61,3 +61,35 @@ export interface TypeActions {
     elements: TypeCartItem[];
     code_action: string;
 }
+
+export interface ActionHistory {
+    id: number;
+    type: string;
+    prix: string;
+    date_action: string;
+    client: number;
+    client_name: string;
+    vendeur: number | null;
+    vendeur_name: string | null;
+    methode_paiement: number;
+    methode_paiement_name: string;
+    code_action: string;
+    elements: number[];
+    elements_details: {
+        id: number;
+        produit_id: number;
+        produit_nom: string;
+        quantite: number;
+        prix_total: number;
+        prix_unitaire: number;
+    }[];
+    livree: boolean;
+    payee: boolean;
+}
+
+
+export interface TypeMethodePaiement {
+    id: number
+    nom: string;
+    description: string;
+}

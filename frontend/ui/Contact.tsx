@@ -5,11 +5,11 @@ import {useSelector} from "react-redux";
 import {selectCurrentUser} from "@/features/user/userSlice";
 import React, {useState} from 'react';
 import api from '@/lib/apis';
-import toast from 'react-hot-toast';
 
 export default function Contact() {
     const user = useSelector(selectCurrentUser);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         email: user?.email || '',
         avis: ''
@@ -27,25 +27,21 @@ export default function Contact() {
         e.preventDefault();
 
         if (!formData.email || !formData.avis) {
-            toast.error('Veuillez remplir tous les champs');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            const response = await api.post('/contact/avis/', formData);
-            toast.success(response.data.detail || 'Votre avis a été envoyé avec succès');
-
+            await api.post('/contact/avis/', formData);
             setFormData({
                 ...formData,
                 avis: ''
             });
-        } catch (error) {
-            console.error('Erreur lors de l\'envoi de l\'avis:', error);
-            const errorMessage = error.response?.data?.error || 'Une erreur est survenue lors de l\'envoi de votre avis';
-            toast.error(errorMessage);
+        } catch {
+            setError('Une erreur est survenue');
         } finally {
+            
             setIsLoading(false);
         }
     };

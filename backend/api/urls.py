@@ -27,6 +27,7 @@ from .views import (
     CurrentVendeurProfileAPIView,
     ApprouverAchatAPIView,
     EnvoyerAvisAPIView,
+    UserActions,
 )
 
 urlpatterns = [
@@ -36,6 +37,7 @@ urlpatterns = [
     path("refresh/", CustomTokenRefreshView.as_view(), name="refresh"),
     path("me/", UserInfoAPIView.as_view(), name="user-info"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("me/actions/", UserActions.as_view(), name="user-actions"),
     # user update
     path("me/update/", UserUpdateAPIView.as_view(), name="user-update"),
     # Produits

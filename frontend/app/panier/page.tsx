@@ -151,12 +151,13 @@ export default function PanierPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Link href="/checkout">
+                        <div className="space-y-2 text-center">
+                            <Link href="/checkout" className={"mb-2 block"}>
                                 <motion.button
                                     whileHover={{scale: 1.01}}
                                     whileTap={{scale: 0.99}}
-                                    className="w-full py-2 bg-[#061e53] text-white rounded-full font-medium
+                                    className="w-4/5 py-2 bg-gradient-to-r from-[#061e53] to-[#2563eb] text-white rounded-full
+                                    font-medium
                                              hover:bg-[#0c2b7a] transition-colors duration-200"
                                 >
                                     Passer la commande
@@ -167,7 +168,7 @@ export default function PanierPage() {
                                 whileHover={{scale: 1.01}}
                                 whileTap={{scale: 0.99}}
                                 onClick={handleViderPanier}
-                                className="w-full py-2 text-red-500 border border-red-500 rounded-full font-medium
+                                className="w-4/5  py-2 text-red-500 border border-red-500 rounded-full font-medium
                                          hover:bg-red-50 transition-colors duration-200"
                             >
                                 Vider le panier

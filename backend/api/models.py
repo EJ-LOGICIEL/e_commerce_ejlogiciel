@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -30,10 +32,11 @@ class Utilisateur(AbstractUser):
         return self.nom_complet
 
     def save(self, *args, **kwargs):
-        self.code_utilisateur = f"{self.role}-{self._get_pk_val()}"
+        if not self.code_utilisateur:
+            client_id = str(uuid.uuid4())[:5]
+            self.code_utilisateur = f"{self.role.uper()}-{client_id}"
         super().save(*args, **kwargs)
 
-        # Create or update Vendeur instance if role is 'vendeur'
         if self.role == "vendeur":
             Vendeur.objects.update_or_create(
                 utilisateur=self,
@@ -105,7 +108,10 @@ class Produit(models.Model):
         return f"{self.nom} - {self.prix}"
 
     def save(self, *args, **kwargs):
-        self.code_produit = f"{self.categorie.nom}-{self.nom}-{self._get_pk_val()}"
+        code = str(uuid.uuid4())[:5]
+        if not self.code_produit:
+            self.code_produit = f"{self.nom.upper()}-{code}"
+
         super().save(*args, **kwargs)
 
 
@@ -120,7 +126,9 @@ class Cle(models.Model):
         return f"{self.produit.nom} - {self.contenue[:4]}-****-{self.produit.prix}"
 
     def save(self, *args, **kwargs):
-        self.code_cle = f"{self.produit.nom}-{self._get_pk_val()}"
+        if not self.code_cle:
+            code = str(uuid.uuid4())[:5]
+            self.code_cle = f"{self.produit.nom.upper()}-{code}"
         super().save(*args, **kwargs)
 
 
@@ -165,7 +173,9 @@ class Action(models.Model):
         return f"{self.type} - {self.client.nom_complet} - {self.code_action}"
 
     def save(self, *args, **kwargs):
-        self.code_action = f"EJ-{self.type}-{self._get_pk_val()}"
+        if not self.code_action:
+            code = str(uuid.uuid4())[:5]
+            self.code_action = f"EJ-{self.type.upper()}-{code}"
         super().save(*args, **kwargs)
 
 

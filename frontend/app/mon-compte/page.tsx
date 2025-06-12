@@ -1,10 +1,10 @@
 'use client';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {selectCurrentUser, updateUser} from '@/features/user/userSlice';
 import toast from 'react-hot-toast';
 import {motion} from 'framer-motion';
-import {TypeActions, UserState} from "@/utils/types";
+import {ActionHistory, UserState} from "@/utils/types";
 import {AppDispatch} from "@/redux/store";
 import api from "@/lib/apis";
 import {logout} from '@/lib/auth';
@@ -12,7 +12,7 @@ import {useRouter} from 'next/navigation';
 import {
     FiCalendar,
     FiCheck,
-    FiDollarSign,
+    FiClock,
     FiLock,
     FiLogOut,
     FiMail,
@@ -23,18 +23,19 @@ import {
     FiX
 } from 'react-icons/fi';
 
+
 const MonCompte = () => {
     const user: UserState | null = useSelector(selectCurrentUser);
     const dispatch: AppDispatch = useDispatch();
     const router = useRouter();
-    const actions: undefined | TypeActions[] = user?.actions
     const [passwordMatch, setPasswordMatch] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [actionHistory, setActionHistory] = useState<ActionHistory[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
     const handleLogout = () => {
         logout();
-        toast.success('Déconnexion réussie');
         router.push('/se-connecter');
     };
 
@@ -46,6 +47,26 @@ const MonCompte = () => {
         new_password: '',
         confirmPassword: '',
     });
+
+    useEffect(() => {
+        fetchActionHistory();
+    }, []);
+
+    const fetchActionHistory = async () => {
+        setIsLoadingHistory(true);
+        try {
+            const response = await api.get('/me/actions/');
+            const actions: ActionHistory[] = response.data.actions;
+            const sortedActions: ActionHistory[] = actions.sort((a, b) => b.id - a.id);
+            setActionHistory(sortedActions);
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            setError(error?.response?.data?.error || "Une erreur est survenue");
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {name, value} = e.target;
@@ -91,15 +112,13 @@ const MonCompte = () => {
         setIsLoading(true);
 
         try {
-            // Préparer les données à envoyer
-                const updateData: Record<string, string> = {
+            const updateData: Record<string, string> = {
                 numero_telephone: formData.numero_telephone,
                 email: formData.email,
                 adresse: formData.adresse,
                 current_password: formData.current_password,
             };
 
-            // Ajouter le nouveau mot de passe s'il est fourni
             if (formData.new_password) {
                 updateData['new_password'] = formData.new_password;
             }
@@ -109,7 +128,6 @@ const MonCompte = () => {
             dispatch(updateUser(response.data));
             toast.success('Profil mis à jour avec succès');
 
-            // Réinitialiser les champs de mot de passe
             setFormData({
                 ...formData,
                 current_password: '',
@@ -118,22 +136,9 @@ const MonCompte = () => {
             });
 
             setError(null);
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour:', error);
-            if (
-                typeof error === 'object' &&
-                error !== null &&
-                'response' in error &&
-                typeof (error as any).response === 'object' &&
-                (error as any).response !== null &&
-                'data' in (error as any).response &&
-                (error as any).response.data &&
-                'error' in (error as any).response.data
-            ) {
-                setError((error as any).response.data.error);
-            } else {
-                setError('Erreur lors de la mise à jour du profil');
-            }
+        } catch {
+            setError('Erreur lors de la mise à jour du profil');
+
         } finally {
             setIsLoading(false);
         }
@@ -150,6 +155,22 @@ const MonCompte = () => {
         });
     };
 
+    const getOrderStatus = (action: ActionHistory) => {
+        if (!action.livree || !action.payee) {
+            return {
+                label: 'En attente',
+                color: 'bg-yellow-100 text-yellow-800',
+                icon: <FiClock className="mr-1"/>
+            };
+        } else {
+            return {
+                label: 'Complétée',
+                color: 'bg-green-100 text-green-800',
+                icon: <FiCheck className="mr-1"/>
+            };
+        }
+    };
+
     return (
         <motion.div
             initial={{opacity: 0}}
@@ -158,18 +179,18 @@ const MonCompte = () => {
         >
             <div className="flex justify-between items-center mb-6 border-b pb-2">
                 <h1 className="text-3xl font-bold text-[#061e53]">Mon Compte</h1>
-                <button 
+                <button
                     onClick={handleLogout}
                     className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
-                    <FiLogOut className="mr-2" /> Se déconnecter
+                    <FiLogOut className="mr-2"/> Se déconnecter
                 </button>
             </div>
 
             <div className="flex flex-col md:flex-row gap-6">
-                <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-6">
-                    <div className="mb-6 space-y-4 bg-gray-50 p-4 rounded-lg">
-                        <h2 className="text-xl font-semibold text-[#061e53] mb-4">Informations personnelles</h2>
+                <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-3">
+                    <div className="mb-3 space-y-2 bg-gray-50 p-2 rounded-lg">
+                        <h2 className="text-xl font-semibold text-[#061e53] mb-2">Informations personnelles</h2>
 
                         <div className="flex items-center">
                             <FiUser className="text-[#061e53] mr-3"/>
@@ -213,11 +234,11 @@ const MonCompte = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <h2 className="text-xl font-semibold text-[#061e53] mb-4">Modifier mes informations</h2>
+                    <form onSubmit={handleSubmit} className="space-y-2">
+                        <h2 className="text-xl font-semibold text-[#061e53] mb-2">Modifier mes informations</h2>
 
                         <div className="flex flex-col">
-                            <label htmlFor="email" className="text-gray-600 flex items-center mb-1">
+                            <label htmlFor="email" className="text-gray-600 flex items-center">
                                 <FiMail className="mr-2"/> Email
                             </label>
                             <input
@@ -226,12 +247,13 @@ const MonCompte = () => {
                                 name="email"
                                 value={formData.email}
                                 onChange={handleInputChange}
-                                className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                className="p-2 border rounded-md focus:ring-[#061e53]
+                                 focus:border-[#061e53] focus:outline-none"
                             />
                         </div>
 
                         <div className="flex flex-col">
-                            <label htmlFor="numero_telephone" className="text-gray-600 flex items-center mb-1">
+                            <label htmlFor="numero_telephone" className="text-gray-600 flex items-center">
                                 <FiPhone className="mr-2"/> Numéro de téléphone
                             </label>
                             <input
@@ -240,12 +262,13 @@ const MonCompte = () => {
                                 name="numero_telephone"
                                 value={formData.numero_telephone}
                                 onChange={handleInputChange}
-                                className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                className="p-2 border rounded-md focus:ring-[#061e53]
+                                 focus:border-[#061e53] focus:outline-none"
                             />
                         </div>
 
                         <div className="flex flex-col">
-                            <label htmlFor="adresse" className="text-gray-600 flex items-center mb-1">
+                            <label htmlFor="adresse" className="text-gray-600 flex items-center">
                                 <FiMapPin className="mr-2"/> Adresse
                             </label>
                             <input
@@ -254,16 +277,17 @@ const MonCompte = () => {
                                 name="adresse"
                                 value={formData.adresse}
                                 onChange={handleInputChange}
-                                className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                className="p-2 border rounded-md focus:ring-[#061e53]
+                                focus:border-[#061e53] focus:outline-none"
                             />
                         </div>
 
-                        <div className="border-t pt-6">
-                            <h2 className="text-xl font-semibold text-[#061e53] mb-4 flex items-center">
+                        <div className="border-t pt-3">
+                            <h2 className="text-xl font-semibold text-[#061e53] mb-2 flex items-center">
                                 <FiLock className="mr-2"/> Modifier le mot de passe
                             </h2>
 
-                            <div className="space-y-4">
+                            <div className="space-y-2">
                                 <div className="flex flex-col">
                                     <label htmlFor="current_password" className="text-gray-600">
                                         Mot de passe actuel <span className="text-red-500">*</span>
@@ -274,7 +298,8 @@ const MonCompte = () => {
                                         name="current_password"
                                         value={formData.current_password}
                                         onChange={handleInputChange}
-                                        className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                        className="p-2 border rounded-md focus:ring-[#061e53]
+                                         focus:border-[#061e53] focus:outline-none"
                                         required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
@@ -292,7 +317,8 @@ const MonCompte = () => {
                                         name="new_password"
                                         value={formData.new_password}
                                         onChange={handleInputChange}
-                                        className="mt-1 p-2 border rounded-md focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none"
+                                        className="p-2 border rounded-md focus:ring-[#061e53]
+                                         focus:border-[#061e53] focus:outline-none"
                                     />
                                 </div>
 
@@ -307,7 +333,8 @@ const MonCompte = () => {
                                             name="confirmPassword"
                                             value={formData.confirmPassword}
                                             onChange={handleInputChange}
-                                            className={`mt-1 p-2 border rounded-md w-full focus:ring-[#061e53] focus:border-[#061e53] focus:outline-none ${
+                                            className={`p-2 border rounded-md w-full focus:ring-[#061e53] 
+                                            focus:border-[#061e53] focus:outline-none ${
                                                 formData.confirmPassword && !passwordMatch ? 'border-red-500' : ''
                                             }`}
                                         />
@@ -332,7 +359,9 @@ const MonCompte = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`w-full flex items-center justify-center py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#061e53] ${
+                            className={`w-full flex items-center justify-center py-2 px-4 rounded-md
+                             transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 
+                             focus:ring-[#061e53] ${
                                 isLoading
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-[#061e53] text-white hover:bg-[#0c2b7a]'
@@ -344,7 +373,8 @@ const MonCompte = () => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                                 strokeWidth="4"/>
                                         <path className="opacity-75" fill="currentColor"
-                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962
+                                              7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                                     </svg>
                                     Mise à jour en cours...
                                 </>
@@ -357,73 +387,81 @@ const MonCompte = () => {
                     <h2 className="text-xl font-semibold text-[#061e53] mb-4 flex items-center">
                         <FiShoppingBag className="mr-2"/> Historique des commandes
                     </h2>
-                    {actions && actions.length > 0 ? (
-                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                            {actions?.map((action, index) => (
-                                <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                            action.type === 'achat' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                        }`}>
-                                            {action.type === 'achat' ? 'Achat' : 'Devis'}
-                                        </span>
-                                        <span className="text-sm text-gray-500 flex items-center">
-                                            <FiCalendar className="mr-1"/> {formatDate(action.date_action)}
-                                        </span>
+
+                    {isLoadingHistory ? (
+                        <div className="flex justify-center items-center h-64">
+                            <svg className="animate-spin h-8 w-8 text-[#061e53]" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2
+                                      5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                            </svg>
+                        </div>
+                    ) : actionHistory && actionHistory.length > 0 ? (
+                        <div className="space-y-4 max-h-[800px] overflow-y-auto pr-2">
+                            {actionHistory.map((action) => {
+                                const status = getOrderStatus(action);
+                                return (
+                                    <div key={action.id}
+                                         className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                action.type === 'achat' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                                            }`}>
+                                                {action.type === 'achat' ? 'Achat' : 'Devis'}
+                                            </span>
+                                            <span className="text-sm text-gray-500 flex items-center">
+                                                <FiCalendar className="mr-1"/> {formatDate(action.date_action)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-medium">Référence: {action.code_action}</span>
+                                            <span className="font-bold text-[#061e53] flex items-center">
+                                           {Number(action.prix).toLocaleString()} Ar
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            <div className={`px-2 py-1 rounded-full text-xs ${status.color}`}>
+                                                {status.icon} {status.label}
+                                            </div>
+
+                                            <div className={`px-2 py-1 rounded-full text-xs ${
+                                                action.livree ? 'bg-green-100 text-green-800' : 'bg-yellow-100' +
+                                                    ' text-yellow-800'
+                                            }`}>
+                                                {action.livree ? (
+                                                    <span className="flex items-center"><FiCheck
+                                                        className="mr-1"/> Livrée</span>
+                                                ) : (
+                                                    <span className="flex items-center"><FiX
+                                                        className="mr-1"/> Non livrée</span>
+                                                )}
+                                            </div>
+
+                                            <div className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
+                                                {action.methode_paiement_name}
+                                            </div>
+                                        </div>
+
+                                        {action.elements_details && action.elements_details.length > 0 && (
+                                            <div className="mt-3 pt-3 border-t">
+                                                <p className="text-sm font-medium mb-2">Produits:</p>
+                                                <ul className="text-sm text-gray-600 space-y-1">
+                                                    {action.elements_details.map((item, idx) => (
+                                                        <li key={idx} className="flex justify-between">
+                                                            <span>{item.produit_nom}</span>
+                                                            <span>x{item.quantite}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium">Référence: {action.code_action}</span>
-                                        <span className="font-bold text-[#061e53] flex items-center">
-                                            <FiDollarSign className="mr-1"/> {Number(action.prix).toLocaleString()} Ar
-                                        </span>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        <div className={`px-2 py-1 rounded-full text-xs ${
-                                            action.payee ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                            {action.payee ? (
-                                                <span className="flex items-center"><FiCheck
-                                                    className="mr-1"/> Payée</span>
-                                            ) : (
-                                                <span className="flex items-center"><FiX
-                                                    className="mr-1"/> Non payée</span>
-                                            )}
-                                        </div>
-
-                                        <div className={`px-2 py-1 rounded-full text-xs ${
-                                            action.livree ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                        }`}>
-                                            {action.livree ? (
-                                                <span className="flex items-center"><FiCheck
-                                                    className="mr-1"/> Livrée</span>
-                                            ) : (
-                                                <span className="flex items-center"><FiX
-                                                    className="mr-1"/> Non livrée</span>
-                                            )}
-                                        </div>
-
-                                        <div className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                                            {action.methode_paiement}
-                                        </div>
-                                    </div>
-
-                                    {action.elements && action.elements.length > 0 && (
-                                        <div className="mt-3 pt-3 border-t">
-                                            <p className="text-sm font-medium mb-2">Produits:</p>
-                                            <ul className="text-sm text-gray-600 space-y-1">
-                                                {action.elements.map((item, idx) => (
-                                                    <li key={idx} className="flex justify-between">
-                                                        <span>{item.produit.nom}</span>
-                                                        <span>x{item.quantite}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-64 text-gray-500">

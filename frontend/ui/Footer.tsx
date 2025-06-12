@@ -19,7 +19,6 @@ function Footer() {
                 <FiPackage className='mr-2 inline-block'/>
                 Produits
             </Link>
-            {user?.id}
             <Link href={user ? '/mon-compte' : '/se-connecter'}>
                 <RiAccountCircle2Line className='mr-2 inline-block'/>
                 Mon compte

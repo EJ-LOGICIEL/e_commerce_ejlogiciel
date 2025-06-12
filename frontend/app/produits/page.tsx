@@ -3,7 +3,7 @@
 import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {motion} from 'framer-motion';
-import {FiChevronLeft, FiChevronRight, FiInfo, FiSearch, FiShoppingCart, FiTrash} from 'react-icons/fi';
+import {FiInfo, FiSearch, FiShoppingCart, FiTrash} from 'react-icons/fi';
 import Image from 'next/image';
 import {
     ajouterAuPanier,
@@ -28,40 +28,15 @@ export default function ProduitsPage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedValidite, setSelectedValidite] = useState('all');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const pageSize = 8; // Number of products per page
 
     const validiteOptions: string[] = ["1 ans", "2 ans", "3 ans", "a vie"];
 
-    // Filter products based on search and validity
     const filteredProducts: TypeProduit[] = produits
         .filter(product =>
             (selectedValidite === 'all' || product.validite === selectedValidite)
             &&
             product.nom.toLowerCase().includes(searchQuery.toLowerCase())
         );
-
-    // Calculate total pages based on filtered products
-    useEffect(() => {
-        setTotalPages(Math.max(1, Math.ceil(filteredProducts.length / pageSize)));
-        // Reset to page 1 when filters change
-        setCurrentPage(1);
-    }, [filteredProducts.length, pageSize]);
-
-    // Get current page products
-    const getCurrentPageProducts = () => {
-        const startIndex = (currentPage - 1) * pageSize;
-        return filteredProducts.slice(startIndex, startIndex + pageSize);
-    };
-
-    // Handle page change
-    const handlePageChange = (page: number) => {
-        if (page < 1 || page > totalPages) return;
-        setCurrentPage(page);
-        // Scroll to top of the product grid
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
 
     useEffect(() => {
         if (produits.length === 0) {
@@ -167,7 +142,7 @@ export default function ProduitsPage() {
                 <div
                     className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4
                      2xl:grid-cols-6 gap-4 md:gap-6">
-                    {getCurrentPageProducts().map((produit: TypeProduit) => (
+                    {filteredProducts.map((produit: TypeProduit) => (
                         <motion.div
                             key={produit.id}
                             initial={{opacity: 0, y: 20}}
@@ -259,63 +234,33 @@ export default function ProduitsPage() {
                 </div>
             )}
 
-            {/* Pagination */}
+            {/* Pagination (pour une future implémentation) */}
             {filteredProducts.length > 0 && (
                 <div className="mt-12 flex justify-center">
                     <nav className="inline-flex rounded-md shadow-sm">
                         <button
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className={`px-3 py-1 rounded-l-md border border-gray-300 flex items-center
-                             ${currentPage === 1 
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-                            <FiChevronLeft className="mr-1" /> Précédent
+                            className="px-3 py-1 rounded-l-md border
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            Précédent
                         </button>
-
-                        {/* Generate page buttons */}
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            // Logic to show pages around current page
-                            let pageNum;
-                            if (totalPages <= 5) {
-                                // If 5 or fewer pages, show all
-                                pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                                // If near start, show first 5 pages
-                                pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                                // If near end, show last 5 pages
-                                pageNum = totalPages - 4 + i;
-                            } else {
-                                // Otherwise show 2 before and 2 after current page
-                                pageNum = currentPage - 2 + i;
-                            }
-
-                            return (
-                                <button
-                                    key={pageNum}
-                                    onClick={() => handlePageChange(pageNum)}
-                                    className={`px-3 py-1 border ${
-                                        i === 0 ? '' : 'border-l-0'
-                                    } border-gray-300 ${
-                                        currentPage === pageNum
-                                            ? 'bg-blue-50 text-blue-600 font-medium'
-                                            : 'bg-white text-gray-500 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {pageNum}
-                                </button>
-                            );
-                        })}
-
                         <button
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPages}
-                            className={`px-3 py-1 rounded-r-md border border-gray-300 flex items-center
-                             ${currentPage === totalPages 
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
-                            Suivant <FiChevronRight className="ml-1" />
+                            className="px-3 py-1 border-t border-b
+                             border-gray-300 bg-blue-50 text-blue-600 font-medium">
+                            1
+                        </button>
+                        <button className="px-3 py-1 border border-gray-300
+                         bg-white text-gray-500 hover:bg-gray-50">
+                            2
+                        </button>
+                        <button
+                            className="px-3 py-1 border-t border-b border-r
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            3
+                        </button>
+                        <button
+                            className="px-3 py-1 rounded-r-md border
+                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
+                            Suivant
                         </button>
                     </nav>
                 </div>

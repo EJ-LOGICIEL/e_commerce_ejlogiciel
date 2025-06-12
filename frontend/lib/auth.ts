@@ -12,7 +12,7 @@ export async function authenticate(data: Partial<UserState & {
     try {
         const res: AxiosResponse = await api.post(`/${type}/`, data, {withCredentials: true});
         store.dispatch(loginUser(res.data.user));
-        localStorage.setItem(ACCESS_TOKEN, res.data.token);
+        sessionStorage.setItem(ACCESS_TOKEN, res.data.token);
         return true
     } catch (error) {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -27,7 +27,7 @@ export async function authenticate(data: Partial<UserState & {
 
 export function logout() {
     // Remove token from localStorage
-    localStorage.removeItem(ACCESS_TOKEN);
+    sessionStorage.removeItem(ACCESS_TOKEN);
     // Dispatch logout action to clear user from Redux store
     store.dispatch(logoutAction());
 }

@@ -29,9 +29,11 @@ class UserSerializer(serializers.ModelSerializer):
             "rcs",
             "stats",
             "code_utilisateur",
+            "actions_client",
+            "actions_vendeur",
         ]
         extra_kwargs = {"password": {"write_only": True}}
-        read_only_fields = ["code_utilisateur"]
+        read_only_fields = ["code_utilisateur, actions_client, actions_vendeur"]
 
     def create(self, validated_data):
         user = Utilisateur.objects.create_user(**validated_data)
@@ -118,12 +120,12 @@ class ElementAchatDevisSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Récupérer le produit pour obtenir son prix
-        produit = validated_data.get('produit')
-        quantite = validated_data.get('quantite', 1)
+        produit = validated_data.get("produit")
+        quantite = validated_data.get("quantite", 1)
 
         # Calculer le prix total basé sur le prix du produit et la quantité
         prix_total = produit.prix * quantite
-        validated_data['prix_total'] = prix_total
+        validated_data["prix_total"] = prix_total
 
         element_achat_devis = ElementAchatDevis.objects.create(**validated_data)
         return element_achat_devis
@@ -154,21 +156,31 @@ class ActionSerializer(serializers.ModelSerializer):
             "livree",
             "payee",
         ]
-        read_only_fields = ["code_action", "date_action", "elements", "elements_details", "client_name", "vendeur_name", "methode_paiement_name"]
+        read_only_fields = [
+            "code_action",
+            "date_action",
+            "elements",
+            "elements_details",
+            "client_name",
+            "vendeur_name",
+            "methode_paiement_name",
+        ]
 
     def get_elements_details(self, obj):
         elements = obj.elements.all()
         result = []
         for element in elements:
             produit = element.produit
-            result.append({
-                "id": element.id,
-                "produit_id": produit.id,
-                "produit_nom": produit.nom,
-                "quantite": element.quantite,
-                "prix_total": float(element.prix_total),
-                "prix_unitaire": float(produit.prix)
-            })
+            result.append(
+                {
+                    "id": element.id,
+                    "produit_id": produit.id,
+                    "produit_nom": produit.nom,
+                    "quantite": element.quantite,
+                    "prix_total": float(element.prix_total),
+                    "prix_unitaire": float(produit.prix),
+                }
+            )
         return result
 
     def get_client_name(self, obj):
@@ -186,31 +198,31 @@ class ActionSerializer(serializers.ModelSerializer):
 
 
 class VendeurSerializer(serializers.ModelSerializer):
-    utilisateur_details = UserSerializer(source='utilisateur', read_only=True)
+    utilisateur_details = UserSerializer(source="utilisateur", read_only=True)
     utilisateur_id = serializers.PrimaryKeyRelatedField(
-        source='utilisateur',
-        queryset=Utilisateur.objects.filter(role='vendeur'),
-        write_only=True
+        source="utilisateur",
+        queryset=Utilisateur.objects.filter(role="vendeur"),
+        write_only=True,
     )
     nombre_produits = serializers.SerializerMethodField()
 
     class Meta:
         model = Vendeur
         fields = [
-            'id',
-            'utilisateur_id',
-            'utilisateur_details',
-            'boutique_nom',
-            'description',
-            'logo',
-            'date_inscription',
-            'note_moyenne',
-            'nombre_ventes',
-            'commission_rate',
-            'est_verifie',
-            'nombre_produits',
+            "id",
+            "utilisateur_id",
+            "utilisateur_details",
+            "boutique_nom",
+            "description",
+            "logo",
+            "date_inscription",
+            "note_moyenne",
+            "nombre_ventes",
+            "commission_rate",
+            "est_verifie",
+            "nombre_produits",
         ]
-        read_only_fields = ['date_inscription', 'note_moyenne', 'nombre_ventes']
+        read_only_fields = ["date_inscription", "note_moyenne", "nombre_ventes"]
 
     def get_nombre_produits(self, obj):
         # This would require adding a ForeignKey from Produit to Vendeur
@@ -218,6 +230,6 @@ class VendeurSerializer(serializers.ModelSerializer):
         return 0
 
     def create(self, validated_data):
-        utilisateur = validated_data.pop('utilisateur')
+        utilisateur = validated_data.pop("utilisateur")
         vendeur = Vendeur.objects.create(utilisateur=utilisateur, **validated_data)
         return vendeur

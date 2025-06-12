@@ -182,6 +182,24 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return res
 
 
+class UserActions(APIView):
+    """Endpoint pour obtenir les actions d'un utilisateur."""
+
+    def get(self, request: Request):
+        """Obenir les actions d'un utilisateur."""
+        user = request.user
+        if user.role == "admin":
+            actions = Action.objects.all()
+        else:
+            actions = Action.objects.filter(client=user)
+        return Response(
+            {
+                "status": 200,
+                "actions": ActionSerializer(actions, many=True).data,
+            }
+        )
+
+
 @extend_schema(
     tags=["Authentication"],
     description="Utilise le refresh token pour obtenir un nouveau token d'accès.",
@@ -515,7 +533,7 @@ class MethodePaiementDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     },
 )
 class ActionCreateAPIView(APIView):
-    permission_classes = [IsAdminOrVendeur]
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request: Request, *args, **kwargs) -> Response:
