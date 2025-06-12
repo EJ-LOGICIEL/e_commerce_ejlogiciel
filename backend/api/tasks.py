@@ -1,14 +1,21 @@
 import io
 import json
 import logging
+from datetime import datetime
 
 from celery import shared_task
 from django.core.mail import EmailMessage
 from django.utils.timezone import localtime
+from dotenv import load_dotenv
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.pdfgen import canvas
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm, mm
+from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, Image as RLImage
+from reportlab.platypus.doctemplate import SimpleDocTemplate
+from reportlab.platypus.flowables import HRFlowable
+
+load_dotenv()
 
 from .models import Action, Utilisateur, EmailEchec
 
@@ -19,188 +26,399 @@ logger = logging.getLogger(__name__)
 def envoyer_cles_email_async(self, client_id, action_id, cles_data):
     try:
         client = Utilisateur.objects.get(id=client_id)
-        print(client.email)
         action = Action.objects.get(id=action_id)
 
-        # Déterminer le type d'action (achat ou devis)
         est_achat = action.type.upper() == "ACHAT"
 
+        # Création du PDF avec une meilleure mise en page
         buffer = io.BytesIO()
-        p = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
 
-        # p.drawImage("ej", 1 * cm, height - 3 * cm, width=5 * cm, height=2 * cm)
-
-        titre = "FACTURE" if est_achat else "DEVIS"
-        p.setFont("Helvetica-Bold", 18)
-        p.drawString(width / 2 - 40, height - 2 * cm, f"{titre} #{action.code_action}")
-
-        p.setFont("Helvetica", 10)
-        p.drawString(1 * cm, height - 3 * cm, "EJ Logiciel")
-        p.drawString(1 * cm, height - 3.5 * cm, "Antananarivo, Madagascar")
-        p.drawString(1 * cm, height - 4 * cm, "Tel: +261 34 12 345 67")
-        p.drawString(1 * cm, height - 4.5 * cm, "Email: romeomanoela123@gmail.com")
-
-        p.drawString(
-            width - 6 * cm,
-            height - 3 * cm,
-            f"Date: {localtime(action.date_action).strftime('%d-%m-%Y')}",
+        # Utiliser SimpleDocTemplate pour une mise en page plus professionnelle
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=20 * mm,
+            leftMargin=20 * mm,
+            topMargin=20 * mm,
+            bottomMargin=20 * mm,
         )
-        p.drawString(width - 6 * cm, height - 3.5 * cm, f"Réf: {action.code_action}")
 
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(1 * cm, height - 6 * cm, "INFORMATIONS CLIENT")
-        p.setFont("Helvetica", 10)
-        p.drawString(1 * cm, height - 6.5 * cm, f"Nom: {client.nom_complet}")
-        p.drawString(1 * cm, height - 7 * cm, f"Email: {client.email}")
-        p.drawString(1 * cm, height - 7.5 * cm, f"Téléphone: {client.numero_telephone}")
-        p.drawString(1 * cm, height - 8 * cm, f"Adresse: {client.adresse}")
+        # Styles
+        styles = getSampleStyleSheet()
+        styles.add(
+            ParagraphStyle(
+                name="TitrePrincipal",
+                parent=styles["Heading1"],
+                fontSize=18,
+                alignment=1,  # Centré
+                spaceAfter=10 * mm,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="SousTitre",
+                parent=styles["Heading2"],
+                fontSize=14,
+                textColor=colors.navy,
+                spaceAfter=5 * mm,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="Normal", parent=styles["Normal"], fontSize=10, spaceAfter=2 * mm
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="SmallText",
+                parent=styles["Normal"],
+                fontSize=8,
+                textColor=colors.grey,
+            )
+        )
+        styles.add(
+            ParagraphStyle(
+                name="Footer",
+                parent=styles["Normal"],
+                fontSize=8,
+                alignment=1,  # Centré
+                textColor=colors.darkgrey,
+            )
+        )
 
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(1 * cm, height - 9.5 * cm, "DÉTAILS DES PRODUITS")
+        # Contenu du document
+        elements = []
 
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(1 * cm, height - 10.5 * cm, "Produit")
-        p.drawString(10 * cm, height - 10.5 * cm, "Quantité")
-        p.drawString(13 * cm, height - 10.5 * cm, "Prix")
-        p.drawString(16 * cm, height - 10.5 * cm, "Total")
+        # En-tête avec logo et titre
+        titre = "FACTURE" if est_achat else "DEVIS"
 
-        p.setStrokeColor(colors.black)
-        p.line(1 * cm, height - 11 * cm, width - 1 * cm, height - 11 * cm)
+        # Logo et informations de l'entreprise
+        data = [
+            [
+                # Essayer de charger le logo, sinon utiliser un espace vide
+                RLImage("backend/static/ej.jpg", width=4 * cm, height=2 * cm),
+                Paragraph(
+                    f"<font size=18><b>{titre} #{action.code_action}</b></font>",
+                    styles["Normal"],
+                ),
+            ],
+            [
+                Paragraph(
+                    "<b>EJ Logiciel</b><br/>Antananarivo, Madagascar<br/>Tel: +261 34 12 345 67<br/>Email: contact@ejlogiciel.com",
+                    styles["Normal"],
+                ),
+                Paragraph(
+                    f"<b>Date:</b> {localtime(action.date_action).strftime('%d-%m-%Y')}<br/><b>Réf:</b> {action.code_action}",
+                    styles["Normal"],
+                ),
+            ],
+        ]
 
-        # Contenu du tableau
-        y = height - 12 * cm
+        header_table = Table(data, colWidths=[doc.width / 2.0] * 2)
+        header_table.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                    ("ALIGN", (1, 1), (1, 1), "RIGHT"),
+                ]
+            )
+        )
+        elements.append(header_table)
+        elements.append(Spacer(1, 10 * mm))
+
+        # Ligne de séparation
+        elements.append(
+            HRFlowable(
+                width="100%", thickness=1, color=colors.lightgrey, spaceAfter=5 * mm
+            )
+        )
+
+        # Informations client
+        elements.append(Paragraph("INFORMATIONS CLIENT", styles["SousTitre"]))
+        client_data = [
+            [
+                Paragraph("<b>Nom:</b>", styles["Normal"]),
+                Paragraph(client.nom_complet, styles["Normal"]),
+            ],
+            [
+                Paragraph("<b>Email:</b>", styles["Normal"]),
+                Paragraph(client.email, styles["Normal"]),
+            ],
+            [
+                Paragraph("<b>Téléphone:</b>", styles["Normal"]),
+                Paragraph(client.numero_telephone, styles["Normal"]),
+            ],
+            [
+                Paragraph("<b>Adresse:</b>", styles["Normal"]),
+                Paragraph(client.adresse, styles["Normal"]),
+            ],
+        ]
+        client_table = Table(
+            client_data, colWidths=[doc.width / 5.0, doc.width * 4 / 5.0]
+        )
+        client_table.setStyle(
+            TableStyle(
+                [
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+                ]
+            )
+        )
+        elements.append(client_table)
+        elements.append(Spacer(1, 10 * mm))
+
+        # Détails des produits
+        elements.append(Paragraph("DÉTAILS DES PRODUITS", styles["SousTitre"]))
+
+        # En-tête du tableau des produits
+        produits_data = [
+            [
+                Paragraph("<b>Produit</b>", styles["Normal"]),
+                Paragraph("<b>Quantité</b>", styles["Normal"]),
+                Paragraph("<b>Prix unitaire</b>", styles["Normal"]),
+                Paragraph("<b>Total</b>", styles["Normal"]),
+            ]
+        ]
+
         total = 0
 
+        # Lignes du tableau des produits
         for produit_nom, cles in cles_data.items():
             quantite = len(cles)
             prix_unitaire = action.prix / sum(len(cles) for cles in cles_data.values())
             prix_total = prix_unitaire * quantite
             total += prix_total
 
-            p.setFont("Helvetica", 10)
-            p.drawString(1 * cm, y, produit_nom)
-            p.drawString(10 * cm, y, str(quantite))
-            p.drawString(13 * cm, y, f"{prix_unitaire:.2f} MGA")
-            p.drawString(16 * cm, y, f"{prix_total:.2f} MGA")
+            produit_row = [
+                Paragraph(produit_nom, styles["Normal"]),
+                Paragraph(str(quantite), styles["Normal"]),
+                Paragraph(f"{prix_unitaire:.2f} MGA", styles["Normal"]),
+                Paragraph(f"{prix_total:.2f} MGA", styles["Normal"]),
+            ]
+            produits_data.append(produit_row)
 
-            # Si c'est un achat, ajouter les clés en dessous
+            # Ajouter les clés pour les achats
             if est_achat:
-                p.setFont("Helvetica-Oblique", 8)
                 for i, cle in enumerate(cles):
-                    y -= 0.5 * cm
-                    p.drawString(
-                        2 * cm,
-                        y,
-                        f"Clé {i+1}: {cle['contenue']} (Validité: {cle['validite']})",
-                    )
+                    cle_row = [
+                        Paragraph(
+                            f"<i>Clé {i+1}: {cle['contenue']} (Validité: {cle['validite']})</i>",
+                            styles["SmallText"],
+                        ),
+                        "",
+                        "",
+                        "",
+                    ]
+                    produits_data.append(cle_row)
 
-            y -= 1 * cm
+        # Ligne du total
+        produits_data.append(
+            [
+                "",
+                "",
+                Paragraph("<b>Total:</b>", styles["Normal"]),
+                Paragraph(f"<b>{action.prix:.2f} MGA</b>", styles["Normal"]),
+            ]
+        )
 
-            # Vérifier si on a besoin d'une nouvelle page
-            if y < 5 * cm:
-                p.showPage()
-                p.setFont("Helvetica-Bold", 12)
-                p.drawString(1 * cm, height - 2 * cm, "DÉTAILS DES PRODUITS (suite)")
-                y = height - 3 * cm
+        # Création du tableau des produits
+        col_widths = [
+            doc.width * 0.4,
+            doc.width * 0.15,
+            doc.width * 0.2,
+            doc.width * 0.25,
+        ]
+        produits_table = Table(produits_data, colWidths=col_widths)
 
-        # Ligne de séparation avant le total
-        p.line(1 * cm, y - 0.5 * cm, width - 1 * cm, y - 0.5 * cm)
+        # Style du tableau des produits
+        table_style = [
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+            ("GRID", (0, 0), (-1, 0), 1, colors.black),
+            ("LINEBELOW", (0, 0), (-1, 0), 1, colors.black),
+            ("LINEBELOW", (0, -2), (-1, -2), 1, colors.black),
+            ("LINEBELOW", (0, 1), (-1, -2), 0.5, colors.lightgrey),
+            ("SPAN", (0, -1), (1, -1)),  # Fusionner les cellules pour le total
+        ]
 
-        # Total
-        p.setFont("Helvetica-Bold", 12)
-        p.drawString(13 * cm, y - 1.5 * cm, "Total:")
-        p.drawString(16 * cm, y - 1.5 * cm, f"{action.prix:.2f} MGA")
+        # Ajouter des styles spécifiques pour les lignes de clés
+        if est_achat:
+            row_index = 1
+            for produit_nom, cles in cles_data.items():
+                row_index += 1  # Ligne du produit
+                for i in range(len(cles)):
+                    table_style.append(
+                        ("SPAN", (0, row_index), (-1, row_index))
+                    )  # Fusionner toute la ligne pour la clé
+                    table_style.append(
+                        ("LEFTPADDING", (0, row_index), (0, row_index), 20)
+                    )  # Indentation
+                    row_index += 1
+
+        produits_table.setStyle(TableStyle(table_style))
+        elements.append(produits_table)
+        elements.append(Spacer(1, 15 * mm))
 
         # Conditions et notes
-        y -= 3 * cm
-        p.setFont("Helvetica-Bold", 10)
-        p.drawString(1 * cm, y, "CONDITIONS ET NOTES:")
-        p.setFont("Helvetica", 8)
+        elements.append(Paragraph("CONDITIONS ET NOTES", styles["SousTitre"]))
 
         if est_achat:
-            p.drawString(
-                1 * cm,
-                y - 0.5 * cm,
+            conditions = [
                 "• Les clés d'activation sont à usage unique et ne peuvent pas être remboursées.",
-            )
-            p.drawString(
-                1 * cm,
-                y - 1 * cm,
                 "• Support technique disponible à support@ejlogiciel.com",
-            )
-            p.drawString(1 * cm, y - 1.5 * cm, "• Merci pour votre achat!")
+                "• Merci pour votre achat!",
+            ]
         else:
-            p.drawString(
-                1 * cm,
-                y - 0.5 * cm,
+            conditions = [
                 "• Ce devis est valable pour une durée de 30 jours à compter de sa date d'émission.",
-            )
-            p.drawString(
-                1 * cm,
-                y - 1 * cm,
                 "• Pour accepter ce devis, veuillez nous contacter à sales@ejlogiciel.com",
-            )
-            p.drawString(
-                1 * cm,
-                y - 1.5 * cm,
                 "• Conditions de paiement: 50% à la commande, 50% à la livraison.",
-            )
+            ]
+
+        for condition in conditions:
+            elements.append(Paragraph(condition, styles["Normal"]))
 
         # Pied de page
-        p.setFont("Helvetica", 8)
-        p.drawString(
-            width / 2 - 4 * cm, 1 * cm, "EJ Logiciel - SARL au capital de 1 000 000 MGA"
-        )
-        p.drawString(
-            width / 2 - 3 * cm, 0.7 * cm, "NIF: 123456789 - STAT: 12345678901234"
+        elements.append(Spacer(1, 20 * mm))
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.lightgrey))
+        elements.append(
+            Paragraph(
+                "EJ Logiciel - SARL au capital de 1 000 000 MGA<br/>NIF: 123456789 - STAT: 12345678901234",
+                styles["Footer"],
+            )
         )
 
-        p.showPage()
-        p.save()
+        # Générer le PDF
+        doc.build(elements)
         buffer.seek(0)
 
-        # Préparer le corps du message selon le type d'action
+        # Préparer l'email
         if est_achat:
             sujet = (
                 f"Votre facture et clés d'activation - Commande #{action.code_action}"
             )
             corps_message = f"""
-            Bonjour {client.nom_complet},
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #061e53; color: white; padding: 10px 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 20px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }}
+                    .footer {{ background-color: #f1f1f1; padding: 10px 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; border: 1px solid #ddd; }}
+                    .button {{ display: inline-block; background-color: #061e53; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px; }}
+                    .highlight {{ color: #061e53; font-weight: bold; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>Confirmation de votre commande</h2>
+                    </div>
+                    <div class="content">
+                        <p>Bonjour <span class="highlight">{client.nom_complet}</span>,</p>
+                        
+                        <p>Nous vous remercions pour votre achat (Commande <span class="highlight">#{action.code_action}</span>).</p>
+                        
+                        <p>Veuillez trouver ci-joint votre facture contenant les clés d'activation pour les produits achetés.</p>
+                        
+                        <p>Récapitulatif de votre commande :</p>
+                        <ul>
+            """
 
-            Nous vous remercions pour votre achat (Commande #{action.code_action}).
+            # Ajouter les détails des produits
+            for produit_nom, cles in cles_data.items():
+                corps_message += (
+                    f"<li><strong>{produit_nom}</strong> - Quantité: {len(cles)}</li>"
+                )
 
-            Veuillez trouver ci-joint votre facture contenant les clés d'activation pour les produits achetés.
-
-            En cas de problème avec vos clés, n'hésitez pas à contacter notre service client.
-
-            Cordialement,
-            L'équipe EJ Logiciel
+            corps_message += f"""
+                        </ul>
+                        
+                        <p>Montant total: <span class="highlight">{action.prix:.2f} MGA</span></p>
+                        
+                        <p>En cas de problème avec vos clés, n'hésitez pas à contacter notre service client.</p>
+                        
+                        <a href="mailto:support@ejlogiciel.com" class="button">Contacter le support</a>
+                    </div>
+                    <div class="footer">
+                        <p>Cordialement,<br>L'équipe EJ Logiciel</p>
+                        <p>© {datetime.now().year} EJ Logiciel - Tous droits réservés</p>
+                    </div>
+                </div>
+            </body>
+            </html>
             """
             nom_fichier = f"facture_{action.code_action}.pdf"
         else:
             sujet = f"Votre devis - Référence #{action.code_action}"
             corps_message = f"""
-            Bonjour {client.nom_complet},
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #061e53; color: white; padding: 10px 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 20px; border-left: 1px solid #ddd; border-right: 1px solid #ddd; }}
+                    .footer {{ background-color: #f1f1f1; padding: 10px 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 5px 5px; border: 1px solid #ddd; }}
+                    .button {{ display: inline-block; background-color: #061e53; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px; }}
+                    .highlight {{ color: #061e53; font-weight: bold; }}
+                    .note {{ background-color: #e7f3ff; padding: 10px; border-left: 4px solid #061e53; margin: 15px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>Votre devis est prêt</h2>
+                    </div>
+                    <div class="content">
+                        <p>Bonjour <span class="highlight">{client.nom_complet}</span>,</p>
+                        
+                        <p>Suite à votre demande, veuillez trouver ci-joint votre devis (Réf: <span class="highlight">#{action.code_action}</span>).</p>
+                        
+                        <p>Récapitulatif de votre devis :</p>
+                        <ul>
+            """
 
-            Suite à votre demande, veuillez trouver ci-joint votre devis (Réf: #{action.code_action}).
+            # Ajouter les détails des produits
+            for produit_nom, cles in cles_data.items():
+                corps_message += (
+                    f"<li><strong>{produit_nom}</strong> - Quantité: {len(cles)}</li>"
+                )
 
-            Ce devis est valable pour une durée de 30 jours à compter de sa date d'émission.
-
-            Pour toute question ou pour valider ce devis, n'hésitez pas à nous contacter.
-
-            Cordialement,
-            L'équipe EJ Logiciel
+            corps_message += f"""
+                        </ul>
+                        
+                        <p>Montant total: <span class="highlight">{action.prix:.2f} MGA</span></p>
+                        
+                        <div class="note">
+                            <p>Ce devis est valable pour une durée de 30 jours à compter de sa date d'émission.</p>
+                        </div>
+                        
+                        <p>Pour toute question ou pour valider ce devis, n'hésitez pas à nous contacter.</p>
+                        
+                        <a href="mailto:sales@ejlogiciel.com" class="button">Valider ce devis</a>
+                    </div>
+                    <div class="footer">
+                        <p>Cordialement,<br>L'équipe EJ Logiciel</p>
+                        <p>© {datetime.now().year} EJ Logiciel - Tous droits réservés</p>
+                    </div>
+                </div>
+            </body>
+            </html>
             """
             nom_fichier = f"devis_{action.code_action}.pdf"
 
-        # Envoyer l'email avec gestion des erreurs
         try:
             email = EmailMessage(
                 subject=sujet,
                 body=corps_message,
                 to=[client.email],
             )
+            email.content_subtype = "html"  # Pour envoyer un email HTML
             email.attach(nom_fichier, buffer.read(), "application/pdf")
             email.send(fail_silently=False)
 
@@ -228,5 +446,5 @@ def envoyer_cles_email_async(self, client_id, action_id, cles_data):
 
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi de l'email: {str(e)}")
-        countdown = 60 * (2**self.request.retries)  # 1min, 2min, 4min, etc.
+        countdown = 60 * (2**self.request.retries)
         raise self.retry(exc=e, countdown=countdown)

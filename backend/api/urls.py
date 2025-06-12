@@ -26,6 +26,7 @@ from .views import (
     VendeurRetrieveUpdateDestroyAPIView,
     CurrentVendeurProfileAPIView,
     ApprouverAchatAPIView,
+    EnvoyerAvisAPIView,
 )
 
 urlpatterns = [
@@ -110,4 +111,5 @@ urlpatterns = [
         CurrentVendeurProfileAPIView.as_view(),
         name="current-vendeur-profile",
     ),
+    path("contact/avis/", EnvoyerAvisAPIView.as_view(), name="envoyer-avis"),
 ]

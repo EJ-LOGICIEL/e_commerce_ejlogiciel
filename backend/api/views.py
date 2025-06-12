@@ -1,5 +1,7 @@
+import os
 from datetime import datetime, timedelta
 
+from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Sum, Count
 from drf_spectacular.utils import (
@@ -968,4 +970,77 @@ class CurrentVendeurProfileAPIView(APIView):
         except Vendeur.DoesNotExist:
             return Response(
                 {"error": "Profil vendeur non trouvé pour cet utilisateur."}, status=404
+            )
+
+
+@extend_schema(
+    tags=["Contact"],
+    summary="Envoyer un avis à l'entreprise",
+    description="Permet à un utilisateur d'envoyer un avis à l'entreprise. L'email et l'avis sont requis.",
+    request={
+        "application/json": {
+            "example": {
+                "email": "client@example.com",
+                "avis": "J'ai beaucoup apprécié vos services. Votre application est très intuitive.",
+            }
+        }
+    },
+    responses={
+        200: {"description": "Avis envoyé avec succès"},
+        400: {"description": "Données invalides"},
+    },
+)
+class EnvoyerAvisAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        email = request.data.get("email")
+        avis = request.data.get("avis")
+
+        if not email or not avis:
+            return Response({"error": "L'email et l'avis sont requis."}, status=400)
+
+        if "@" not in email or "." not in email:
+            return Response({"error": "Format d'email invalide."}, status=400)
+
+        try:
+            sujet = f"Nouvel avis client de {email}"
+            corps_message = f"""
+            Nouvel avis reçu:
+            
+            De: {email}
+            
+            Avis:
+            {avis}
+            
+            ---
+            Cet email a été envoyé automatiquement depuis le formulaire de contact du site.
+            """
+
+            send_mail(
+                subject=sujet,
+                message=corps_message,
+                from_email=os.getenv("MAIL_HOST_USER"),
+                recipient_list=["roblinmanoela@gmail.com"],
+                fail_silently=False,
+            )
+
+            return Response(
+                {
+                    "detail": "Votre avis a été envoyé avec succès. Merci pour votre retour !"
+                }
+            )
+
+        except Exception as e:
+            # Journalisation de l'erreur
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur lors de l'envoi de l'avis: {str(e)}")
+
+            return Response(
+                {
+                    "error": "Une erreur est survenue lors de l'envoi de votre avis. Veuillez réessayer plus tard."
+                },
+                status=500,
             )
