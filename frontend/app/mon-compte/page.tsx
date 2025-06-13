@@ -2,7 +2,6 @@
 import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {selectCurrentUser, updateUser} from '@/features/user/userSlice';
-import toast from 'react-hot-toast';
 import {motion} from 'framer-motion';
 import {ActionHistory, UserState} from "@/utils/types";
 import {AppDispatch} from "@/redux/store";
@@ -105,7 +104,6 @@ const MonCompte = () => {
             formData.new_password;
 
         if (!hasChanges) {
-            toast.error('Aucune modification détectée');
             return;
         }
 
@@ -126,7 +124,6 @@ const MonCompte = () => {
             const response = await api.patch('/me/update/', updateData);
 
             dispatch(updateUser(response.data));
-            toast.success('Profil mis à jour avec succès');
 
             setFormData({
                 ...formData,

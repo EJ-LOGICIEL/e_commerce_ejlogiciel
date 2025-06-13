@@ -13,7 +13,6 @@ import {
     selectPanier,
     viderPanier
 } from '@/features/produit/produitSlice';
-import toast from 'react-hot-toast';
 import {AppDispatch} from "@/redux/store";
 import {TypeCartItem} from "@/utils/types";
 
@@ -27,22 +26,18 @@ export default function PanierPage() {
 
     const handleAugmenterQuantite = (produitId: number) => {
         dispatch(augmenterQuantite(produitId));
-        toast.success('Quantité augmentée');
     };
 
     const handleDiminuerQuantite = (produitId: number) => {
         dispatch(diminuerQuantite(produitId));
-        toast.success('Quantité diminuée');
     };
 
     const handleSupprimerProduit = (produitId: number) => {
         dispatch(retirerDuPanier(produitId));
-        toast.success('Produit supprimé du panier');
     };
 
     const handleViderPanier = () => {
         dispatch(viderPanier());
-        toast.success('Panier vidé');
     };
 
     if (panier.length === 0) {

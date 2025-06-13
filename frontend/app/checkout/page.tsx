@@ -10,7 +10,6 @@ import {FiAlertCircle, FiCheck, FiCreditCard, FiInfo, FiShoppingBag} from 'react
 import Image from 'next/image';
 import Link from 'next/link';
 import api from '@/lib/apis';
-import toast from 'react-hot-toast';
 import {TypeCartItem, TypeMethodePaiement} from '@/utils/types';
 import {AppDispatch} from '@/redux/store';
 
@@ -27,27 +26,20 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         if (!user) {
-            toast.error('Veuillez vous connecter pour continuer');
             router.push('/se-connecter');
             return;
         }
 
         if (panier.length === 0 && !orderComplete) {
-            toast.error('Votre panier est vide');
             router.push('/produits');
             return;
         }
 
         const fetchPaymentMethods = async () => {
-            try {
-                const response = await api.get('/methode-paiement/');
-                setPaymentMethods(response.data);
-                if (response.data.length > 0) {
-                    setSelectedPaymentMethod(response.data[0].id);
-                }
-            } catch (error) {
-                console.error('Error fetching payment methods:', error);
-                toast.error('Erreur lors du chargement des méthodes de paiement');
+            const response = await api.get('/methode-paiement/');
+            setPaymentMethods(response.data);
+            if (response.data.length > 0) {
+                setSelectedPaymentMethod(response.data[0].id);
             }
         };
 
@@ -68,47 +60,38 @@ export default function CheckoutPage() {
 
     const handleSubmitOrder = async () => {
         if (!selectedPaymentMethod) {
-            toast.error('Veuillez sélectionner une méthode de paiement');
             return;
         }
 
         if (!transactionReference.trim()) {
-            toast.error('Veuillez saisir la référence de votre transaction');
             return;
         }
 
         setIsLoading(true);
 
-        try {
-            const orderData = {
-                action: {
-                    type: 'achat',
-                    prix: calculerTotal(),
-                    commentaire: transactionReference.trim(),
-                    client: user?.id,
-                    methode_paiement: selectedPaymentMethod,
-                },
-                produits: panier.map(item => ({
-                    produit: item.produit.id,
-                    quantite: item.quantite,
-                    prix_total: item.produit.prix * item.quantite,
-                })),
-            };
 
-            console.log(orderData)
+        const orderData = {
+            action: {
+                type: 'achat',
+                prix: calculerTotal(),
+                commentaire: transactionReference.trim(),
+                client: user?.id,
+                methode_paiement: selectedPaymentMethod,
+            },
+            produits: panier.map(item => ({
+                produit: item.produit.id,
+                quantite: item.quantite,
+                prix_total: item.produit.prix * item.quantite,
+            })),
+        };
 
-            await api.post('/actions/create/', orderData);
+        await api.post('/actions/create/', orderData);
 
-            setOrderComplete(true);
-            dispatch(viderPanier());
-        } catch (error) {
-            console.error('Error submitting order:', error);
-        } finally {
-            setIsLoading(false);
-        }
+        setOrderComplete(true);
+        dispatch(viderPanier());
+        setIsLoading(false)
     };
 
-    // Order success screen
     if (orderComplete) {
         return (
             <div className="max-w-4xl mx-auto p-4 min-h-[70vh] flex flex-col items-center justify-center">

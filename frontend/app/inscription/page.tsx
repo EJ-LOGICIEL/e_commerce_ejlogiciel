@@ -89,7 +89,7 @@ export default function AuthPage() {
                                 exit={{opacity: 0, y: -20}}
                                 className="mb-2"
                             >
-                                <div className="bg-red-100 p-2 rounded-lg md:max-w-[420px]">
+                                <div className="bg-red-100 p-2 rounded-lg md:max-w-[420px] mx-auto">
                                     <div className="flex items-center">
                                         <div className="flex-shrink-0">
                                             <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20"

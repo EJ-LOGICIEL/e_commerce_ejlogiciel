@@ -29,8 +29,6 @@ class UserSerializer(serializers.ModelSerializer):
             "rcs",
             "stats",
             "code_utilisateur",
-            "actions_client",
-            "actions_vendeur",
         ]
         extra_kwargs = {"password": {"write_only": True}}
         read_only_fields = ["code_utilisateur, actions_client, actions_vendeur"]
