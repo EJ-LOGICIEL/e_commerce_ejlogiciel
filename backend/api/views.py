@@ -545,7 +545,6 @@ class ActionCreateAPIView(APIView):
             return Response(
                 {"error": "Données incomplètes. Action et produits requis."}, status=400
             )
-
         if type_action not in ["ACHAT", "DEVIS"]:
             return Response(
                 {"error": "Type d'action invalide. Doit être 'ACHAT' ou 'DEVIS'."},
@@ -559,22 +558,6 @@ class ActionCreateAPIView(APIView):
 
         if len(produits_map) != len(produit_ids):
             return Response({"error": "Certains produits n'existent pas."}, status=400)
-
-        if type_action == "ACHAT":
-            for item in produits_data:
-                produit_id = item["produit"]
-                produit = produits_map[str(produit_id)]
-                quantite = item.get("quantite", 1)
-
-                count = Cle.objects.filter(produit=produit, disponiblite=True).count()
-                if count < quantite:
-                    return Response(
-                        {
-                            "error": f"Pas assez de clés disponibles pour {produit.nom}. "
-                            f"Seulement {count} disponible(s) pour {quantite} demandée(s)."
-                        },
-                        status=400,
-                    )
 
         action_data["livree"] = False
         action_data["payee"] = False
@@ -592,8 +575,9 @@ class ActionCreateAPIView(APIView):
 
         elements_serializer = ElementAchatDevisSerializer(data=elements_data, many=True)
         if not elements_serializer.is_valid():
+            print("dfvggggggggggggg")
             return Response(elements_serializer.errors, status=400)
-
+        print("dfvggggggggggggg1")
         elements_serializer.save()
 
         if type_action == "DEVIS":

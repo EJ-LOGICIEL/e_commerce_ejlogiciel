@@ -25,8 +25,6 @@ export default function CheckoutPage() {
     const [orderComplete, setOrderComplete] = useState(false);
     const [transactionReference, setTransactionReference] = useState('');
 
-    console.log(user)
-
     useEffect(() => {
         if (!user) {
             toast.error('Veuillez vous connecter pour continuer');
@@ -93,8 +91,11 @@ export default function CheckoutPage() {
                 produits: panier.map(item => ({
                     produit: item.produit.id,
                     quantite: item.quantite,
+                    prix_total: item.produit.prix * item.quantite,
                 })),
             };
+
+            console.log(orderData)
 
             await api.post('/actions/create/', orderData);
 

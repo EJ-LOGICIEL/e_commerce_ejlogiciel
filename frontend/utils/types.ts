@@ -1,5 +1,5 @@
 export interface UserState {
-    id?: number;
+    id: number;
     username: string;
     nom_complet: string;
     email: string;
@@ -17,26 +17,20 @@ export interface UserState {
 
 
 export interface TypeProduit {
+    code_produit: string;
     id: number;
     nom: string;
     description: string;
     prix: number;
     validite: string;
     image: string;
-    categorie: Categorie | number;
+    categorie: TypeCategorie | number;
 }
 
-export interface Categorie {
+export interface TypeCategorie {
+    description: string;
     id: number;
     nom: string;
-}
-
-export interface Cle {
-    id: number;
-    contenue: string;
-    code_cle: string;
-    validite: string;
-    produit: TypeProduit | number;
 }
 
 export interface loginData {
@@ -73,6 +67,7 @@ export interface ActionHistory {
     vendeur_name: string | null;
     methode_paiement: number;
     methode_paiement_name: string;
+    commentaire?: string;
     code_action: string;
     elements: number[];
     elements_details: {
@@ -92,4 +87,21 @@ export interface TypeMethodePaiement {
     id: number
     nom: string;
     description: string;
+}
+
+
+export interface TypeCle {
+    id: number;
+    contenue: string;
+    produit: number;
+    disponiblite: boolean;
+    code_cle: string;
+}
+
+export interface TypeElementAchatDevis {
+    id: number;
+    action: number;
+    produit: number;
+    quantite: number
+    prix_total: number;
 }

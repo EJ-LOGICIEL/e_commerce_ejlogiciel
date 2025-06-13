@@ -148,7 +148,7 @@ class Action(models.Model):
 
     type = models.CharField(max_length=10, choices=CHOIX_TYPE)
     prix = models.DecimalField(max_digits=10, decimal_places=2)
-    commentaire = models.TextField(null=True, blank=True)
+    commentaire = models.CharField(max_length=100, default="Id transaction")
     date_action = models.DateTimeField(auto_now_add=True)
     livree = models.BooleanField(default=False)
     payee = models.BooleanField(default=False)

@@ -153,6 +153,7 @@ class ActionSerializer(serializers.ModelSerializer):
             "code_action",
             "elements",
             "elements_details",
+            "commentaire",
             "livree",
             "payee",
         ]

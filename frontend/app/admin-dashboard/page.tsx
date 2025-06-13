@@ -19,64 +19,17 @@ import {
     FiX
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import {
+    ActionHistory,
+    TypeCategorie,
+    TypeCle,
+    TypeElementAchatDevis,
+    TypeMethodePaiement,
+    TypeProduit,
+    UserState
+} from "@/utils/types";
+import {AxiosResponse} from "axios";
 
-// Define types for our data models
-interface User {
-    id: number;
-    username: string;
-    email: string;
-    nom_complet: string;
-    role: string;
-    type: string;
-    numero_telephone: string;
-    adresse: string;
-}
-
-interface Category {
-    id: number;
-    nom: string;
-    description: string;
-}
-
-interface Product {
-    id: number;
-    categorie: number;
-    nom: string;
-    description: string;
-    validite: string;
-    code_produit: string;
-    image: string;
-    prix_min: number;
-    prix: number;
-    prix_max: number;
-}
-
-interface PaymentMethod {
-    id: number;
-    nom: string;
-    description: string;
-}
-
-interface Key {
-    id: number;
-    contenue: string;
-    produit: number;
-    disponiblite: boolean;
-    code_cle: string;
-}
-
-interface Action {
-    id: number;
-    type: string;
-    prix: number;
-    date_action: string;
-    livree: boolean;
-    payee: boolean;
-    client: number;
-    vendeur: number | null;
-    methode_paiement: number;
-    code_action: string;
-}
 
 const AdminDashboard = () => {
     const user = useSelector(selectCurrentUser);
@@ -86,15 +39,14 @@ const AdminDashboard = () => {
     const [error, setError] = useState<string | null>(null);
 
     // State for data
-    const [users, setUsers] = useState<User[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
-    const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-    const [keys, setKeys] = useState<Key[]>([]);
-    const [actions, setActions] = useState<Action[]>([]);
-    const [elementsAchatDevis, setElementsAchatDevis] = useState<any[]>([]);
+    const [users, setUsers] = useState<UserState[]>([]);
+    const [categories, setCategories] = useState<TypeCategorie[]>([]);
+    const [products, setProducts] = useState<TypeProduit[]>([]);
+    const [paymentMethods, setPaymentMethods] = useState<TypeMethodePaiement[]>([]);
+    const [keys, setKeys] = useState<TypeCle[]>([]);
+    const [actions, setActions] = useState<Partial<ActionHistory>[]>([]);
+    const [elementsAchatDevis, setElementsAchatDevis] = useState<TypeElementAchatDevis[]>([]);
 
-    // State for sales statistics
     const [salesStats, setSalesStats] = useState({
         totalSales: 0,
         totalRevenue: 0,
@@ -104,8 +56,7 @@ const AdminDashboard = () => {
         undeliveredSales: 0
     });
 
-    // State for modals
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] = useState<boolean>(false);
     const [modalType, setModalType] = useState<'add' | 'edit'>('add');
     const [currentItem, setCurrentItem] = useState<any>(null);
     const [showProductModal, setShowProductModal] = useState(false);
@@ -115,16 +66,15 @@ const AdminDashboard = () => {
     });
 
     // Form data for different entities
-    const [userForm, setUserForm] = useState<Partial<User>>({});
-    const [categoryForm, setCategoryForm] = useState<Partial<Category>>({});
-    const [productForm, setProductForm] = useState<Partial<Product>>({});
+    const [userForm, setUserForm] = useState<Partial<UserState>>({});
+    const [categoryForm, setCategoryForm] = useState<Partial<TypeCategorie>>({});
+    const [productForm, setProductForm] = useState<Partial<TypeProduit>>({});
     const [productImage, setProductImage] = useState<File | null>(null);
-    const [paymentMethodForm, setPaymentMethodForm] = useState<Partial<PaymentMethod>>({});
-    const [keyForm, setKeyForm] = useState<Partial<Key>>({});
-    const [actionForm, setActionForm] = useState<Partial<Action>>({});
-    const [actionProductsForm, setActionProductsForm] = useState<any[]>([]);
+    const [paymentMethodForm, setPaymentMethodForm] = useState<Partial<TypeMethodePaiement>>({});
+    const [keyForm, setKeyForm] = useState<Partial<TypeCle>>({});
+    const [actionForm, setActionForm] = useState<Partial<ActionHistory>>({});
+    const [actionProductsForm, setActionProductsForm] = useState<[]>([]);
 
-    // Check if user is admin
     useEffect(() => {
         if (!user || user.role !== 'admin') {
             toast.error('Accès non autorisé. Redirection vers la page de connexion.');
@@ -132,7 +82,6 @@ const AdminDashboard = () => {
         }
     }, [user, router]);
 
-    // Fetch data based on active tab
     useEffect(() => {
         if (user?.role === 'admin') {
             fetchData();
@@ -148,7 +97,6 @@ const AdminDashboard = () => {
 
             switch (activeTab) {
                 case 'users':
-                    // This endpoint might need to be created in the backend
                     response = await api.get('/users/');
                     setUsers(response.data);
                     break;
@@ -165,27 +113,23 @@ const AdminDashboard = () => {
                     setPaymentMethods(response.data);
                     break;
                 case 'keys':
-                    // Fetch products first to ensure we have product data for displaying key information
                     const productsResponse = await api.get('/produits/');
                     setProducts(productsResponse.data);
 
-                    // Then fetch keys
                     response = await api.get('/cles/');
                     setKeys(response.data);
                     break;
                 case 'actions':
-                    // Fetch actions
                     response = await api.get('/actions/');
                     const actionsData = response.data;
                     setActions(actionsData);
 
-                    // Calculate sales statistics
-                    const purchaseActions = actionsData.filter((action: any) => action.type === 'achat');
+                    const purchaseActions: Partial<ActionHistory>[] = actionsData.filter((action: Partial<ActionHistory>) => action.type === 'achat');
                     const totalSales = purchaseActions.length;
-                    const totalRevenue = purchaseActions.reduce((sum: number, action: any) => sum + parseFloat(action.prix), 0);
-                    const paidSales = purchaseActions.filter((action: any) => action.payee).length;
+                    const totalRevenue = purchaseActions.reduce((sum: number, action) => sum + parseFloat(action.prix), 0);
+                    const paidSales = purchaseActions.filter((action) => action.payee).length;
                     const unpaidSales = totalSales - paidSales;
-                    const deliveredSales = purchaseActions.filter((action: any) => action.livree).length;
+                    const deliveredSales = purchaseActions.filter((action) => action.livree).length;
                     const undeliveredSales = totalSales - deliveredSales;
 
                     setSalesStats({
@@ -197,7 +141,6 @@ const AdminDashboard = () => {
                         undeliveredSales
                     });
 
-                    // Fetch products if not already loaded
                     if (products.length === 0) {
                         try {
                             const productsResponse = await api.get('/produits/');
@@ -229,7 +172,6 @@ const AdminDashboard = () => {
         setModalType('add');
         setCurrentItem(null);
 
-        // Reset form data based on active tab
         switch (activeTab) {
             case 'users':
                 setUserForm({});
@@ -246,7 +188,6 @@ const AdminDashboard = () => {
                 break;
             case 'keys':
                 setKeyForm({});
-                // Ensure products are loaded for the dropdown
                 if (products.length === 0) {
                     try {
                         const response = await api.get('/produits/');
@@ -264,10 +205,8 @@ const AdminDashboard = () => {
                     livree: false,
                     payee: false,
                 });
-                // Initialize empty products list
                 setActionProductsForm([]);
 
-                // Ensure users and payment methods are loaded for the dropdown
                 if (users.length === 0) {
                     try {
                         const response = await api.get('/users/');
@@ -286,7 +225,6 @@ const AdminDashboard = () => {
                         toast.error('Erreur lors du chargement des méthodes de paiement');
                     }
                 }
-                // Ensure products are loaded for the dropdown
                 if (products.length === 0) {
                     try {
                         const response = await api.get('/produits/');
@@ -302,11 +240,10 @@ const AdminDashboard = () => {
         setShowModal(true);
     };
 
-    const handleEditItem = async (item: any) => {
+    const handleEditItem = async (item) => {
         setModalType('edit');
         setCurrentItem(item);
 
-        // Set form data based on active tab and selected item
         switch (activeTab) {
             case 'users':
                 setUserForm(item);
@@ -323,7 +260,6 @@ const AdminDashboard = () => {
                 break;
             case 'keys':
                 setKeyForm(item);
-                // Ensure products are loaded for the dropdown
                 if (products.length === 0) {
                     try {
                         const response = await api.get('/produits/');
@@ -337,11 +273,9 @@ const AdminDashboard = () => {
             case 'actions':
                 setActionForm(item);
 
-                // Set products for this action
                 if (item.elements_details) {
                     setActionProductsForm(item.elements_details);
                 } else {
-                    // If elements_details is not available, try to find elements from elementsAchatDevis
                     const actionElements = elementsAchatDevis.filter(element => element.action === item.id);
                     const formattedElements = actionElements.map(element => {
                         const product = products.find(p => p.id === element.produit);
@@ -357,14 +291,11 @@ const AdminDashboard = () => {
                     setActionProductsForm(formattedElements);
                 }
 
-                // Ensure users and payment methods are loaded for the dropdown
                 if (users.length === 0) {
                     try {
                         const response = await api.get('/users/');
                         setUsers(response.data);
-                    } catch (err) {
-                        console.error('Error loading users:', err);
-                        toast.error('Erreur lors du chargement des utilisateurs');
+                    } catch {
                     }
                 }
                 if (paymentMethods.length === 0) {
@@ -377,14 +308,12 @@ const AdminDashboard = () => {
                     }
                 }
 
-                // Ensure products are loaded for the dropdown
                 if (products.length === 0) {
                     try {
                         const response = await api.get('/produits/');
                         setProducts(response.data);
-                    } catch (err) {
-                        console.error('Error loading products:', err);
-                        toast.error('Erreur lors du chargement des produits');
+                    } catch {
+                        ;
                     }
                 }
                 break;
@@ -432,9 +361,7 @@ const AdminDashboard = () => {
             toast.success('Élément supprimé avec succès');
             setIsLoading(false);
         } catch (err) {
-            toast.error('Erreur lors de la suppression');
             setIsLoading(false);
-            console.error(err);
         }
     };
 
@@ -476,7 +403,7 @@ const AdminDashboard = () => {
         setIsLoading(true);
 
         try {
-            let response;
+            let response: AxiosResponse;
 
             switch (activeTab) {
                 case 'users':
@@ -511,7 +438,6 @@ const AdminDashboard = () => {
                             }
                         });
 
-                        // Add image file if it exists
                         if (productImage) {
                             formData.append('image', productImage);
                         }
@@ -532,11 +458,9 @@ const AdminDashboard = () => {
                             setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
                         }
                     } else {
-                        // No image change, use regular JSON request
                         response = await api.put(`/produits/${currentItem.id}/`, productForm);
                         setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
                     }
-                    // Reset product image state
                     setProductImage(null);
                     break;
                 case 'payment-methods':
@@ -573,17 +497,13 @@ const AdminDashboard = () => {
                             }));
 
                             try {
-                                // Create elements for the action
                                 await Promise.all(elementsData.map(element =>
                                     api.post('/elements/', element)
                                 ));
 
-                                // Refresh the actions list to get the updated data
                                 const actionsResponse = await api.get('/actions/');
                                 setActions(actionsResponse.data);
                             } catch (err) {
-                                console.error('Error creating elements:', err);
-                                toast.error('Erreur lors de la création des éléments');
                             }
                         } else {
                             setActions([...actions, newAction]);
@@ -639,24 +559,17 @@ const AdminDashboard = () => {
                     break;
             }
 
-            toast.success(modalType === 'add' ? 'Élément ajouté avec succès' : 'Élément modifié avec succès');
-            setShowModal(false);
-            setIsLoading(false);
-        } catch (err) {
-            toast.error('Erreur lors de l\'enregistrement');
-            setIsLoading(false);
-            console.error(err);
+        } catch {
         }
     };
 
-    // Render form based on active tab
     const renderForm = () => {
         switch (activeTab) {
             case 'users':
                 return (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom d'utilisateur</label>
+                            <label className="block text-sm font-medium text-gray-700">Nom d&#39;utilisateur</label>
                             <input
                                 type="text"
                                 name="username"
@@ -767,14 +680,16 @@ const AdminDashboard = () => {
                 );
             case 'actions':
                 return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-1">
                         <div>
                             <label className="block text-sm font-medium text-gray-700">Type</label>
                             <select
                                 name="type"
                                 value={actionForm.type || 'achat'}
                                 onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300
+                                rounded-md shadow-sm focus:outline-none focus:ring-indigo-500
+                                 focus:border-indigo-500"
                                 required
                             >
                                 <option value="achat">Achat</option>
@@ -788,7 +703,8 @@ const AdminDashboard = () => {
                                 name="prix"
                                 value={actionForm.prix || ''}
                                 onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                 required
                             />
                         </div>
@@ -798,7 +714,8 @@ const AdminDashboard = () => {
                                 name="client"
                                 value={actionForm.client || ''}
                                 onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
+                                focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                 required
                             >
                                 <option value="">Sélectionner un client</option>
@@ -813,7 +730,9 @@ const AdminDashboard = () => {
                                 name="vendeur"
                                 value={actionForm.vendeur || ''}
                                 onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md
+                                 shadow-sm focus:outline-none focus:ring-indigo-500
+                                 focus:border-indigo-500"
                             >
                                 <option value="">Sélectionner un vendeur (optionnel)</option>
                                 {users.filter(u => u.role === 'vendeur' || u.role === 'admin').map(user => (
@@ -879,34 +798,6 @@ const AdminDashboard = () => {
                                     </div>
                                 ) : (
                                     <p className="text-gray-500 text-center py-4">Aucun produit ajouté</p>
-                                )}
-
-                                {(modalType === 'edit' || modalType === 'add') && (
-                                    <div className="mt-4">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                if (products.length > 0) {
-                                                    // Reset the product form first
-                                                    setProductToAdd({
-                                                        produit_id: products[0].id,
-                                                        quantite: 1
-                                                    });
-                                                    // Use setTimeout to ensure the modal opens after the current event cycle
-                                                    setTimeout(() => {
-                                                        setShowProductModal(true);
-                                                    }, 0);
-                                                } else {
-                                                    toast.error('Aucun produit disponible');
-                                                }
-                                            }}
-                                            className="flex items-center text-indigo-600 hover:text-indigo-900"
-                                        >
-                                            <FiPlus className="mr-1"/> Ajouter un produit
-                                        </button>
-                                    </div>
                                 )}
                             </div>
                         </div>
@@ -1227,10 +1118,8 @@ const AdminDashboard = () => {
         }
     };
 
-    // Render table based on active tab
     const renderTable = () => {
         switch (activeTab) {
-            // Dans la section qui affiche le tableau des actions (ventes)
             case 'actions':
                 return (
                     <table className="min-w-full divide-y divide-gray-200">
@@ -1242,6 +1131,7 @@ const AdminDashboard = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -1269,6 +1159,7 @@ const AdminDashboard = () => {
                                         ))}
                                     </div>
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap">{action.commentaire} Ar</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                   action.payee ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -1524,6 +1415,7 @@ const AdminDashboard = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -1559,6 +1451,7 @@ const AdminDashboard = () => {
                                         <span className="text-gray-500">Aucun produit</span>
                                     )}
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap">{action.commentaire} Ar</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         action.payee ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -1779,7 +1672,7 @@ const AdminDashboard = () => {
                                 <p className="text-2xl font-bold">{salesStats.totalSales}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500">Chiffre d'affaires</p>
+                                <p className="text-sm text-gray-500">Chiffre d&#39;affaires</p>
                                 <p className="text-2xl font-bold">{salesStats.totalRevenue.toLocaleString()} Ar</p>
                             </div>
                         </div>
