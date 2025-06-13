@@ -3,7 +3,7 @@
 import React, {useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {motion} from 'framer-motion';
-import {FiInfo, FiSearch, FiShoppingCart, FiTrash} from 'react-icons/fi';
+import {FiChevronLeft, FiChevronRight, FiInfo, FiSearch, FiShoppingCart, FiTrash} from 'react-icons/fi';
 import Image from 'next/image';
 import {
     ajouterAuPanier,
@@ -28,6 +28,9 @@ export default function ProduitsPage() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedValidite, setSelectedValidite] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const pageSize = 8; // Number of products per page
 
     const validiteOptions: string[] = ["1 ans", "2 ans", "3 ans", "a vie"];
 
@@ -37,6 +40,22 @@ export default function ProduitsPage() {
             &&
             product.nom.toLowerCase().includes(searchQuery.toLowerCase())
         );
+
+    useEffect(() => {
+        setTotalPages(Math.max(1, Math.ceil(filteredProducts.length / pageSize)));
+        setCurrentPage(1);
+    }, [filteredProducts.length, pageSize]);
+
+    const getCurrentPageProducts = () => {
+        const startIndex = (currentPage - 1) * pageSize;
+        return filteredProducts.slice(startIndex, startIndex + pageSize);
+    };
+
+    const handlePageChange = (page: number) => {
+        if (page < 1 || page > totalPages) return;
+        setCurrentPage(page);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    };
 
     useEffect(() => {
         if (produits.length === 0) {
@@ -91,8 +110,8 @@ export default function ProduitsPage() {
                 className={'mb-6 flex-col md:flex-row gap-4 items-center justify-center block md:flex'}
                 initial={{opacity: 0, height: 0}}
                 animate={{
-                    opacity: window.innerWidth >= 768 ? 1 : 0,
-                    height: window.innerWidth >= 768 ? 'auto' : 0
+                    opacity: 1,
+                    height: 'auto'
                 }}
                 transition={{duration: 0.3}}
             >
@@ -103,7 +122,8 @@ export default function ProduitsPage() {
                             placeholder="Rechercher un produit..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full md:w-64 px-4 py-2 pl-10 pr-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full md:w-64 px-4 py-2 pl-10 pr-4 rounded-lg border border-gray-300
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                         <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"/>
                     </div>
@@ -119,7 +139,8 @@ export default function ProduitsPage() {
                             id="validite-filter"
                             value={selectedValidite}
                             onChange={(e) => setSelectedValidite(e.target.value)}
-                            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg
+                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="all">Tous</option>
                             {validiteOptions.map((option) => (
@@ -142,7 +163,7 @@ export default function ProduitsPage() {
                 <div
                     className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4
                      2xl:grid-cols-6 gap-2 md:gap-6">
-                    {filteredProducts.map((produit: TypeProduit) => (
+                    {getCurrentPageProducts().map((produit: TypeProduit) => (
                         <motion.div
                             key={produit.id}
                             initial={{opacity: 0, y: 20}}
@@ -168,8 +189,10 @@ export default function ProduitsPage() {
                                     alt={produit.nom}
                                 />
                                 <div
-                                    className="absolute top-2 right-2 bg-gradient-to-r from-[#061e53] to-[#2563eb]
-                                     backdrop-blur-sm text-xs font-medium text-white px-2 py-1 rounded-full shadow-sm">
+                                    className="absolute top-2 right-2 bg-gradient-to-r
+                                    from-[#061e53] to-[#2563eb]
+                                     backdrop-blur-sm text-xs font-medium text-white px-2 py-1
+                                      rounded-full shadow-sm">
                                     {produit.validite}
                                 </div>
                             </div>
@@ -234,33 +257,57 @@ export default function ProduitsPage() {
                 </div>
             )}
 
-            {/* Pagination (pour une future implémentation) */}
+            {/* Pagination */}
             {filteredProducts.length > 0 && (
                 <div className="mt-12 flex justify-center">
                     <nav className="inline-flex rounded-md shadow-sm">
                         <button
-                            className="px-3 py-1 rounded-l-md border
-                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
-                            Précédent
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className={`px-3 py-1 rounded-l-md border border-gray-300 flex items-center
+                             ${currentPage === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                            <FiChevronLeft className="mr-1"/> Précédent
                         </button>
+
+                        {Array.from({length: Math.min(5, totalPages)}, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                                pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                            } else {
+                                pageNum = currentPage - 2 + i;
+                            }
+
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => handlePageChange(pageNum)}
+                                    className={`px-3 py-1 border ${
+                                        i === 0 ? '' : 'border-l-0'
+                                    } border-gray-300 ${
+                                        currentPage === pageNum
+                                            ? 'bg-blue-50 text-blue-600 font-medium'
+                                            : 'bg-white text-gray-500 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
+
                         <button
-                            className="px-3 py-1 border-t border-b
-                             border-gray-300 bg-blue-50 text-blue-600 font-medium">
-                            1
-                        </button>
-                        <button className="px-3 py-1 border border-gray-300
-                         bg-white text-gray-500 hover:bg-gray-50">
-                            2
-                        </button>
-                        <button
-                            className="px-3 py-1 border-t border-b border-r
-                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
-                            3
-                        </button>
-                        <button
-                            className="px-3 py-1 rounded-r-md border
-                             border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
-                            Suivant
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className={`px-3 py-1 rounded-r-md border border-gray-300 flex items-center
+                             ${currentPage === totalPages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+                            Suivant <FiChevronRight className="ml-1"/>
                         </button>
                     </nav>
                 </div>
