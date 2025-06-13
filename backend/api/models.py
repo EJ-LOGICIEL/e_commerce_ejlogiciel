@@ -34,7 +34,7 @@ class Utilisateur(AbstractUser):
     def save(self, *args, **kwargs):
         if not self.code_utilisateur:
             client_id = str(uuid.uuid4())[:5]
-            self.code_utilisateur = f"{self.role.uper()}-{client_id}"
+            self.code_utilisateur = f"{self.role.upper()}-{client_id}"
         super().save(*args, **kwargs)
 
         if self.role == "vendeur":
@@ -128,7 +128,7 @@ class Cle(models.Model):
     def save(self, *args, **kwargs):
         if not self.code_cle:
             code = str(uuid.uuid4())[:5]
-            self.code_cle = f"{self.produit.nom.upper()}-{code}"
+            self.code_cle = f"{self.produit.nom}-{code}"
         super().save(*args, **kwargs)
 
 
@@ -175,7 +175,7 @@ class Action(models.Model):
     def save(self, *args, **kwargs):
         if not self.code_action:
             code = str(uuid.uuid4())[:5]
-            self.code_action = f"EJ-{self.type.upper()}-{code}"
+            self.code_action = f"ej-{self.type}-{code}"
         super().save(*args, **kwargs)
 
 
