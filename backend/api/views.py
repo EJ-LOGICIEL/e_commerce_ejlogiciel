@@ -176,7 +176,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             httponly=True,
             max_age=3600 * 24 * 7,  # 7 jours
             secure=True,
-            samesite="Lax",
+            samesite="None",
         )
 
         return res
@@ -213,7 +213,6 @@ class CustomTokenRefreshView(TokenRefreshView):
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         request._full_data = {"refresh": request.COOKIES.get("refresh_token")}
-        print(request)
         res: Response = super().post(request, *args, **kwargs)
         refresh_token = res.data.pop("refresh")
 
@@ -223,6 +222,7 @@ class CustomTokenRefreshView(TokenRefreshView):
             httponly=True,
             max_age=36000 * 24 * 7,
             secure=True,
+            samesite="None",
         )
         return res
 

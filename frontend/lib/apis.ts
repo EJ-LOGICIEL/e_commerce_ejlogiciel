@@ -19,16 +19,35 @@ api.interceptors.request.use(
     }
 );
 
-export const refreshToken = async () => {
-    try {
-        const response = await api.post("/refresh/");
-        const newToken: string = response.data.access;
-        sessionStorage.setItem(ACCESS_TOKEN, newToken)
-        return newToken;
-    } catch (error) {
-        console.error("Failed to refresh token", error);
-        return null;
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config
 
-    }
-}
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true
+
+            try {
+                const response = await api.post(
+                    `http://127.0.0.1:8001/api/refresh/`,
+                    {},
+                    {withCredentials: true}
+                )
+
+                const newToken: string = response.data.access
+                sessionStorage.setItem(ACCESS_TOKEN, newToken)
+
+                originalRequest.headers.Authorization = `Bearer ${newToken}`
+
+                return api(originalRequest)
+            } catch (refreshError) {
+                sessionStorage.removeItem(ACCESS_TOKEN)
+                window.location.href = '/se-connecter'
+                return Promise.reject(refreshError)
+            }
+        }
+
+        return Promise.reject(error)
+    },
+)
 export default api;

@@ -73,7 +73,7 @@ export default function HomePage() {
 
     return (
         <main
-            className="text-gray-800 sm:px-6 py-6 space-y-8
+            className="text-gray-800 px-2 py-6 space-y-8
              md:mx-auto md:max-w-6xl md:px-6 ">
             {/* HERO SECTION */}
             <motion.section
@@ -92,7 +92,8 @@ export default function HomePage() {
                     >
                         Bienvenue chez <br/>
                         <span
-                            className="bg-gradient-to-r md:text-7xl from-[#061e53] to-[#2563eb] text-transparent bg-clip-text">
+                            className="bg-gradient-to-r md:text-7xl from-[#061e53]
+                             to-[#2563eb] text-transparent bg-clip-text">
                             EJ LOGICIEL
                         </span>
                     </motion.h1>
@@ -121,15 +122,15 @@ export default function HomePage() {
 
                     <motion.div
                         className="flex flex-col sm:flex-row items-center justify-center
-                         md:justify-start gap-4 mt-8"
+                         md:justify-start gap-4 mt-8 text-center"
                         initial={{opacity: 0, y: 20}}
                         animate={{opacity: 1, y: 0}}
                         transition={{duration: 0.5, delay: 0.6}}
                     >
-                        <Link href={'/produits'} className="w-full sm:w-auto">
+                        <Link href={'/produits'} className="w-4/5 sm:w-full">
                             <motion.button
                                 className="w-full bg-gradient-to-r from-[#061e53] to-[#2563eb]
-                                 text-white px-8 py-3 rounded-full font-bold hover:shadow-xl
+                                 text-white px-4 py-3 rounded-full font-bold hover:shadow-xl
                                   hover:from-[#0c2b7a] hover:to-[#1d4ed8] transition-all
                                   duration-300 flex items-center justify-center"
                                 whileHover={{
@@ -144,9 +145,9 @@ export default function HomePage() {
                         </Link>
 
                         {!user ? (
-                            <Link href={'/se-connecter'} className="w-full sm:w-auto">
+                            <Link href={'/se-connecter'} className="w-4/5 sm:w-full">
                                 <motion.button
-                                    className="w-full border-2 border-[#061e53] text-[#061e53] px-8 py-3
+                                    className="w-full border-2 border-[#061e53] text-[#061e53] px-4 py-3
                                     rounded-full font-bold hover:bg-blue-50 hover:shadow-lg transition-all
                                      duration-300 flex items-center justify-center"
                                     whileHover={{scale: 1.05, boxShadow: "0 4px 12px rgba(37, 99, 235, 0.15)"}}
@@ -156,9 +157,9 @@ export default function HomePage() {
                                 </motion.button>
                             </Link>
                         ) : (
-                            <Link href={'/mon-compte'} className="w-full sm:w-auto">
+                            <Link href={'/mon-compte'} className="w-4/5 sm:w-full">
                                 <motion.button
-                                    className="w-full border-2 border-[#061e53] text-[#061e53] px-8 py-3 rounded-full
+                                    className="w-full border-2 border-[#061e53] text-[#061e53] px-4 py-3 rounded-full
                                      font-bold hover:bg-blue-50 hover:shadow-lg transition-all duration-300
                                      flex items-center justify-center"
                                     whileHover={{scale: 1.05, boxShadow: "0 4px 12px rgba(37, 99, 235, 0.15)"}}
