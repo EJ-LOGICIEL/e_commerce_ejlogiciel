@@ -8,6 +8,7 @@ export interface UserState {
     numero_telephone: string;
     adresse: string;
     code_utilisateur?: string;
+    avis: string | null
     nif?: string;
     stats?: string;
     rcs?: string;

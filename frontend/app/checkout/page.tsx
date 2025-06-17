@@ -323,7 +323,7 @@ export default function CheckoutPage() {
                                     'Confirmer la commande'
                                 )}
                             </motion.button>
-
+                            
                             <Link href="/panier">
                                 <motion.button
                                     whileHover={{scale: 1.01}}
@@ -338,7 +338,8 @@ export default function CheckoutPage() {
                         </div>
 
                         <p className="text-xs text-gray-500 mt-4 text-center">
-                            En confirmant votre commande, vous acceptez nos conditions générales de vente.
+                            En confirmant votre commande, vous acceptez nos conditions
+                            générales de vente.
                         </p>
                     </div>
                 </div>

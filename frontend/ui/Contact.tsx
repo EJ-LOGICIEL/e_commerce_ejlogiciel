@@ -1,19 +1,25 @@
 'use client';
 import {FaFacebookF, FaLinkedinIn} from 'react-icons/fa';
 import Link from "next/link";
-import {useSelector} from "react-redux";
-import {selectCurrentUser} from "@/features/user/userSlice";
+import {useDispatch, useSelector} from "react-redux";
+import {selectCurrentUser, updateUser} from "@/features/user/userSlice";
 import React, {useState} from 'react';
 import api from '@/lib/apis';
+import {UserState} from "@/utils/types";
+import {AppDispatch} from "@/redux/store";
 
 export default function Contact() {
-    const user = useSelector(selectCurrentUser);
+    const user: UserState | null = useSelector(selectCurrentUser);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [message, setMessage] = useState<string>(`${user !== null ? "Un client, un avis ☺️" :
+        "Vous devez être " +
+        "connecté pour donner votre avis. merci "}`);
+    const [disable, setDisable] = useState<boolean>(user === null || user?.avis !== null)
+    const dispatch: AppDispatch = useDispatch();
     const [formData, setFormData] = useState({
-        email: user?.email || '',
         avis: ''
     });
+
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
@@ -23,6 +29,7 @@ export default function Contact() {
             ...formData,
             [name]: value
         });
+        setMessage('')
     };
 
 
@@ -31,7 +38,7 @@ export default function Contact() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.email || !formData.avis) {
+        if (!formData.avis) {
             return;
         }
 
@@ -43,8 +50,16 @@ export default function Contact() {
                 ...formData,
                 avis: ''
             });
-        } catch {
-            setError('Une erreur est survenue');
+            const user_info = await api.get('/me/');
+            dispatch(updateUser(user_info.data));
+            setMessage("Nous avous bien reçu votre avis, merci 🙏")
+            setDisable(true)
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            if (error?.status === 400) setMessage("Vous avez déjà donné votre avis")
+            else
+                setMessage('Une erreur est survenue');
         } finally {
 
             setIsLoading(false);
@@ -99,29 +114,20 @@ export default function Contact() {
                     </p>
 
                     <form className="space-y-3" onSubmit={handleSubmit}>
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Votre adresse email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#061e53]"
-                            required
-                        />
                         <textarea
                             name="avis"
                             placeholder="Votre avis ici..."
                             rows={4}
-                            value={formData.avis}
+                            value={message === "" ? formData.avis : message}
                             onChange={handleInputChange}
                             className="w-full px-4 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#061e53]"
                             required
                         />
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={disable || isLoading}
                             className={`bg-[#061e53] text-white w-full py-2 rounded-full hover:bg-black transition font-medium ${
-                                isLoading ? 'opacity-70 cursor-not-allowed' : ''
+                                disable || isLoading ? 'opacity-70 cursor-not-allowed' : ''
                             }`}
                         >
                             {isLoading ? 'Envoi en cours...' : 'Envoyer'}

@@ -28,6 +28,7 @@ from .models import (
     ElementAchatDevis,
     Vendeur,
 )
+from .password_generator import generate_password
 from .serializers import (
     UserSerializer,
     ProduitSerializer,
@@ -159,6 +160,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             "email": user.email,
             "code_utilisateur": user.code_utilisateur,
             "nif": user.nif,
+            "avis": user.avis,
             "stats": user.stats,
             "rcs": user.rcs,
         }
@@ -246,6 +248,8 @@ class UserInfoAPIView(APIView):
 )
 class LogoutView(APIView):
     """Endpoint pour déconnecter un utilisateur."""
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, *args, **kwargs) -> Response:
         response = Response({"detail": "Successfully logged out."})
@@ -993,17 +997,22 @@ class CurrentVendeurProfileAPIView(APIView):
     },
 )
 class EnvoyerAvisAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, *args, **kwargs) -> Response:
-        email = request.data.get("email")
         avis = request.data.get("avis")
 
-        if not email or not avis:
-            return Response({"error": "L'email et l'avis sont requis."}, status=400)
-
-        if "@" not in email or "." not in email:
-            return Response({"error": "Format d'email invalide."}, status=400)
+        if not avis:
+            return Response({"error": "L'avis sont requis."}, status=400)
+        user = request.user
+        email = user.email
+        if user.avis:
+            return Response(
+                {
+                    "detail": "Vous avez déjà un avis",
+                },
+                status=400,
+            )
 
         try:
             sujet = f"Nouvel avis client de {email}"
@@ -1027,6 +1036,9 @@ class EnvoyerAvisAPIView(APIView):
                 fail_silently=False,
             )
 
+            user.avis = avis
+            user.save()
+
             return Response(
                 {
                     "detail": "Votre avis a été envoyé avec succès. Merci pour votre retour !"
@@ -1045,4 +1057,31 @@ class EnvoyerAvisAPIView(APIView):
                     "error": "Une erreur est survenue lors de l'envoi de votre avis. Veuillez réessayer plus tard."
                 },
                 status=500,
+            )
+
+
+class MotDePasseOublier(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "L'email sont requis."}, status=400)
+        try:
+            user = Utilisateur.objects.get(email=email)
+            password = generate_password(8, has_number=True)
+            send_mail(
+                subject="Nouvelle mot de passe",
+                message=f"Votre nouveau mot de passe est: {password}",
+                from_email=os.getenv("MAIL_HOST_USER"),
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            user.set_password(password)
+            user.save()
+            return Response({"detail": "mot de pass reinitialisé avec succés"})
+        except Utilisateur.DoesNotExist:
+            return Response(
+                {"error": "L'email n'existe pas."},
+                status=404,
             )

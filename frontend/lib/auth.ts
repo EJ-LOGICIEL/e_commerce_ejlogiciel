@@ -27,8 +27,8 @@ export async function authenticate(data: Partial<UserState & {
 
 export async function logout() {
     // Remove token from localStorage
+    await api.post('/logout/');
     sessionStorage.removeItem(ACCESS_TOKEN);
     // Dispatch logout action to clear user from Redux store
     store.dispatch(logoutAction());
-    await api.post('/logout/');
 }

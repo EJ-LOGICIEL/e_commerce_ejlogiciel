@@ -22,6 +22,7 @@ class Utilisateur(AbstractUser):
     type = models.CharField(max_length=20, choices=CHOIX_TYPE, default="particulier")
     numero_telephone = models.CharField(max_length=15)
     adresse = models.CharField(max_length=100)
+    avis = models.CharField(max_length=200, null=True, blank=True)
     code_utilisateur = models.CharField(max_length=50, null=True, blank=True)
 
     nif = models.CharField(max_length=100, null=True, blank=True)

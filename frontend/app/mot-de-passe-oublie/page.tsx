@@ -2,56 +2,39 @@
 
 import React, {useState} from 'react';
 import Link from 'next/link';
-import {authenticate} from '@/lib/auth';
 import {AnimatePresence, motion} from 'framer-motion';
-import {useRouter} from "next/navigation";
+import api from '@/lib/apis';
 
-interface LoginData {
-    username: string;
-    password: string;
-}
-
-const initialLoginData: LoginData = {
-    username: '',
-    password: ''
-};
-
-export default function LoginPage() {
-    const [loginData, setLoginData] = useState<LoginData>(initialLoginData);
+export default function MotDePasseOubliePage() {
+    const [email, setEmail] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const router = useRouter()
 
-    const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const {name, value} = e.target;
-        setLoginData(prev => ({...prev, [name]: value}));
-    };
-
-    const handleLoginSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setSuccess(null);
         setIsLoading(true);
-        const res: number | true | null = await authenticate(loginData, 'token');
-        if (res === true) {
-            router.push('/produits');
-            setLoginData(initialLoginData);
-            setIsLoading(false);
-            return
-        }
-        if (res === 401) {
-            setError('Nom d\'utilisateur ou mot de passe incorrect');
-            setIsLoading(false);
-            return
-        }
-        setIsLoading(false);
-        setError('Une erreur est survenue lors de la connexion');
-        return
 
+        try {
+            await api.post('/mot-de-passe/', {email});
+            setSuccess('Un email de réinitialisation a été envoyé à votre adresse email.');
+            setEmail('');
+        } catch (error) {
+            // @ts-expect-error - error handling
+            if (error?.status === 404) {
+                setError('Aucun utilisateur trouvé avec cette adresse email.');
+            } else {
+                setError('Une erreur est survenue. Veuillez réessayer plus tard.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <div
-            className="py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+        <div className="py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
             <div className="max-w-md w-full overflow-hidden">
                 <div className="px-8 py-12">
                     <AnimatePresence>
@@ -73,9 +56,32 @@ export default function LoginPage() {
                                             </svg>
                                         </div>
                                         <div className="ml-3">
-                                            <p className="text-sm text-red-700">
-                                                {error}
-                                            </p>
+                                            <p className="text-sm text-red-700">{error}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {success && (
+                            <motion.div
+                                initial={{opacity: 0, y: -20}}
+                                animate={{opacity: 1, y: 0}}
+                                exit={{opacity: 0, y: -20}}
+                                className="mb-6"
+                            >
+                                <div className="bg-green-100 p-2 rounded-lg">
+                                    <div className="flex items-center">
+                                        <div className="flex-shrink-0">
+                                            <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20"
+                                                 fill="currentColor">
+                                                <path fillRule="evenodd"
+                                                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                      clipRule="evenodd"/>
+                                            </svg>
+                                        </div>
+                                        <div className="ml-3">
+                                            <p className="text-sm text-green-700">{success}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -89,69 +95,30 @@ export default function LoginPage() {
                             animate={{y: 0}}
                             className="text-3xl font-extrabold text-[#061e53]"
                         >
-                            Connexion
+                            Mot de passe oublié
                         </motion.h2>
                         <p className="mt-2 text-sm text-gray-600">
-                            Accédez à votre espace personnel
+                            Entrez votre adresse email pour réinitialiser votre mot de passe
                         </p>
                     </div>
 
-                    <form onSubmit={handleLoginSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="space-y-1">
-                            <label htmlFor="username" className="text-sm font-medium text-gray-700">
-                                Nom d&#39;utilisateur
+                            <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                Adresse email
                             </label>
                             <input
-                                id="username"
-                                type="text"
-                                name="username"
+                                id="email"
+                                type="email"
+                                name="email"
                                 required
-                                value={loginData.username}
-                                onChange={handleLoginChange}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 
                                          focus:outline-none focus:ring-[#061e53] focus:border-[#061e53] transition duration-150 ease-in-out"
-                                placeholder="Entrez votre nom d'utilisateur"
+                                placeholder="Entrez votre adresse email"
                             />
                         </div>
-
-                        <div className="space-y-1">
-                            <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                                Mot de passe
-                            </label>
-                            <input
-                                id="password"
-                                type="password"
-                                name="password"
-                                required
-                                value={loginData.password}
-                                onChange={handleLoginChange}
-                                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 
-                                         focus:outline-none focus:ring-[#061e53] focus:border-[#061e53] transition duration-150 ease-in-out"
-                                placeholder="Entrez votre mot de passe"
-                            />
-                        </div>
-
-                        {/*<div className="flex items-center justify-between">*/}
-                        {/*    <div className="flex items-center">*/}
-                        {/*        <input*/}
-                        {/*            id="remember-me"*/}
-                        {/*            type="checkbox"*/}
-                        {/*            className="h-4 w-4 text-[#061e53] focus:ring-[#061e53] border-gray-300 rounded"*/}
-                        {/*        />*/}
-                        {/*        <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">*/}
-                        {/*            Se souvenir de moi*/}
-                        {/*        </label>*/}
-                        {/*    </div>*/}
-
-                        <div className="text-sm">
-                            <Link
-                                href="/mot-de-passe-oublie"
-                                className="font-medium text-[#061e53] hover:text-[#0c2b7a] transition-colors duration-200"
-                            >
-                                Mot de passe oublié ?
-                            </Link>
-                        </div>
-                        {/*</div>*/}
 
                         <div className="mt-8">
                             <motion.button
@@ -173,17 +140,17 @@ export default function LoginPage() {
                                             <path className="opacity-75" fill="currentColor"
                                                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
                                         </svg>
-                                        Connexion en cours...
+                                        Envoi en cours...
                                     </div>
-                                ) : 'Se connecter'}
+                                ) : 'Réinitialiser le mot de passe'}
                             </motion.button>
 
                             <div className="mt-6 text-center">
                                 <Link
-                                    href="/inscription"
+                                    href="/se-connecter"
                                     className="text-sm text-gray-600 hover:text-[#061e53] transition-colors duration-200"
                                 >
-                                    Pas encore de compte ? Inscrivez-vous !
+                                    Retour à la page de connexion
                                 </Link>
                             </div>
                         </div>

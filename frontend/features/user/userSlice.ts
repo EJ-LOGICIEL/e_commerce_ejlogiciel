@@ -18,9 +18,7 @@ const userSlice = createSlice({
             state: WritableDraft<AuthState>,
             action: PayloadAction<UserState>
         ) => {
-            console.log(action.payload)
             state.user = action.payload;
-            console.log(state.user)
         },
         logout: (
             state: WritableDraft<AuthState>

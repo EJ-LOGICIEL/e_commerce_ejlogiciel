@@ -28,6 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
             "nif",
             "rcs",
             "stats",
+            "avis",
             "code_utilisateur",
         ]
         extra_kwargs = {"password": {"write_only": True}}

@@ -12,7 +12,6 @@ import {selectCurrentUser} from "@/features/user/userSlice";
 function Header(): React.ReactElement {
     const dispatch: AppDispatch = useDispatch();
     const user: UserState | null = useSelector(selectCurrentUser)
-    console.log('header user', user)
     useEffect(() => {
         dispatch(chargerPanier())
     }, [dispatch])
