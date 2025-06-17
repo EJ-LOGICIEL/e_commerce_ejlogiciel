@@ -15,6 +15,14 @@ export interface UserState {
 
 }
 
+export interface CurrentItem {
+   id: number;
+   action: string;
+   produit: string;
+   quantite: number;
+   prix_total: number
+}
+
 
 export interface TypeProduit {
     code_produit: string;
@@ -25,6 +33,8 @@ export interface TypeProduit {
     validite: string;
     image: string;
     categorie: TypeCategorie | number;
+    prix_min: number;
+    prix_max: number;
 }
 
 export interface TypeCategorie {
@@ -45,7 +55,7 @@ export interface TypeCartItem {
 
 export interface TypeActions {
     type: string;
-    prix: string;
+    prix: number;
     date_action: string;
     livree: boolean;
     payee: boolean;
@@ -56,10 +66,19 @@ export interface TypeActions {
     code_action: string;
 }
 
+export interface ActionElementDetail {
+    id: number;
+    produit_id: number;
+    produit_nom: string;
+    quantite: number;
+    prix_total: number;
+    prix_unitaire: number;
+}
+
 export interface ActionHistory {
     id: number;
     type: string;
-    prix: string;
+    prix: number;
     date_action: string;
     client: number;
     client_name: string;
@@ -70,14 +89,7 @@ export interface ActionHistory {
     commentaire?: string;
     code_action: string;
     elements: number[];
-    elements_details: {
-        id: number;
-        produit_id: number;
-        produit_nom: string;
-        quantite: number;
-        prix_total: number;
-        prix_unitaire: number;
-    }[];
+    elements_details: ActionElementDetail[];
     livree: boolean;
     payee: boolean;
 }

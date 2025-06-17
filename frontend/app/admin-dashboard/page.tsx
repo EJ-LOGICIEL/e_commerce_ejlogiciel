@@ -20,16 +20,16 @@ import {
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import {
-    ActionHistory,
+    ActionElementDetail,
+    ActionHistory, CurrentItem,
     TypeCategorie,
     TypeCle,
     TypeElementAchatDevis,
     TypeMethodePaiement,
     TypeProduit,
     UserState
-} from "@/utils/types";
+} from '@/utils/types';
 import {AxiosResponse} from "axios";
-
 
 const AdminDashboard = () => {
     const user = useSelector(selectCurrentUser);
@@ -58,7 +58,7 @@ const AdminDashboard = () => {
 
     const [showModal, setShowModal] = useState<boolean>(false);
     const [modalType, setModalType] = useState<'add' | 'edit'>('add');
-    const [currentItem, setCurrentItem] = useState<any>(null);
+    const [currentItem, setCurrentItem] = useState<CurrentItem | null>(null);
     const [showProductModal, setShowProductModal] = useState(false);
     const [productToAdd, setProductToAdd] = useState<{ produit_id: number, quantite: number }>({
         produit_id: 0,
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
     const [paymentMethodForm, setPaymentMethodForm] = useState<Partial<TypeMethodePaiement>>({});
     const [keyForm, setKeyForm] = useState<Partial<TypeCle>>({});
     const [actionForm, setActionForm] = useState<Partial<ActionHistory>>({});
-    const [actionProductsForm, setActionProductsForm] = useState<[]>([]);
+    const [actionProductsForm, setActionProductsForm] = useState<ActionElementDetail[]>([]);
 
     useEffect(() => {
         if (!user || user.role !== 'admin') {
@@ -126,7 +126,11 @@ const AdminDashboard = () => {
 
                     const purchaseActions: Partial<ActionHistory>[] = actionsData.filter((action: Partial<ActionHistory>) => action.type === 'achat');
                     const totalSales = purchaseActions.length;
-                    const totalRevenue = purchaseActions.reduce((sum: number, action) => sum + parseFloat(action.prix), 0);
+                    const totalRevenue = purchaseActions.reduce((sum: number, action: Partial<ActionHistory>) => {
+  const prix = action.prix ?? 0; // si prix est undefined, on met 0
+  return sum + prix;
+}, 0);
+
                     const paidSales = purchaseActions.filter((action) => action.payee).length;
                     const unpaidSales = totalSales - paidSales;
                     const deliveredSales = purchaseActions.filter((action) => action.livree).length;
@@ -240,26 +244,26 @@ const AdminDashboard = () => {
         setShowModal(true);
     };
 
-    const handleEditItem = async (item) => {
+    const handleEditItem = async (item: Partial<UserState> | Partial<TypeCategorie> | Partial<TypeProduit> | Partial<TypeMethodePaiement> | Partial<TypeCle> | Partial<ActionHistory>) => {
         setModalType('edit');
-        setCurrentItem(item);
+        setCurrentItem(item as CurrentItem);
 
         switch (activeTab) {
             case 'users':
-                setUserForm(item);
+                setUserForm(item as Partial<UserState>);
                 break;
             case 'categories':
-                setCategoryForm(item);
+                setCategoryForm(item as Partial<TypeCategorie>);
                 break;
             case 'products':
-                setProductForm(item);
+                setProductForm(item as Partial<TypeProduit>);
                 setProductImage(null);
                 break;
             case 'payment-methods':
-                setPaymentMethodForm(item);
+                setPaymentMethodForm(item as Partial<TypeMethodePaiement>);
                 break;
             case 'keys':
-                setKeyForm(item);
+                setKeyForm(item as Partial<TypeCle>);
                 if (products.length === 0) {
                     try {
                         const response = await api.get('/produits/');
@@ -271,12 +275,13 @@ const AdminDashboard = () => {
                 }
                 break;
             case 'actions':
-                setActionForm(item);
+                const actionItem = item as Partial<ActionHistory>;
+                setActionForm(actionItem);
 
-                if (item.elements_details) {
-                    setActionProductsForm(item.elements_details);
+                if (actionItem.elements_details) {
+                    setActionProductsForm(actionItem.elements_details);
                 } else {
-                    const actionElements = elementsAchatDevis.filter(element => element.action === item.id);
+                    const actionElements = elementsAchatDevis.filter(element => element.action === actionItem.id);
                     const formattedElements = actionElements.map(element => {
                         const product = products.find(p => p.id === element.produit);
                         return {
@@ -313,7 +318,6 @@ const AdminDashboard = () => {
                         const response = await api.get('/produits/');
                         setProducts(response.data);
                     } catch {
-                        ;
                     }
                 }
                 break;
@@ -322,7 +326,8 @@ const AdminDashboard = () => {
         setShowModal(true);
     };
 
-    const handleDeleteItem = async (id: number) => {
+    const handleDeleteItem = async (id?: number) => {
+        if (id === undefined) return;
         if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
             return;
         }
@@ -360,7 +365,7 @@ const AdminDashboard = () => {
 
             toast.success('Élément supprimé avec succès');
             setIsLoading(false);
-        } catch (err) {
+        } catch {
             setIsLoading(false);
         }
     };
@@ -412,9 +417,11 @@ const AdminDashboard = () => {
                         response = await api.post('/users/', userForm);
                         setUsers([...users, response.data]);
                     } else {
-                        // This endpoint might need to be created in the backend
-                        response = await api.put(`/users/${currentItem.id}/`, userForm);
-                        setUsers(users.map(u => u.id === currentItem.id ? response.data : u));
+                        if (currentItem){
+                            // This endpoint might need to be created in the backend
+                            response = await api.put(`/users/${currentItem.id}/`, userForm);
+                            setUsers(users.map(u => u.id === currentItem.id ? response.data : u));
+                        }
                     }
                     break;
                 case 'categories':
@@ -422,8 +429,10 @@ const AdminDashboard = () => {
                         response = await api.post('/categories/', categoryForm);
                         setCategories([...categories, response.data]);
                     } else {
-                        response = await api.put(`/categories/${currentItem.id}/`, categoryForm);
-                        setCategories(categories.map(c => c.id === currentItem.id ? response.data : c));
+                        if (currentItem){
+                            response = await api.put(`/categories/${currentItem.id}/`, categoryForm);
+                            setCategories(categories.map(c => c.id === currentItem.id ? response.data : c));
+                        }
                     }
                     break;
                 case 'products':
@@ -434,7 +443,12 @@ const AdminDashboard = () => {
                         // Add all product form fields to FormData
                         Object.entries(productForm).forEach(([key, value]) => {
                             if (value !== undefined && value !== null) {
-                                formData.append(key, value.toString());
+                                // Handle categorie specially if it's an object
+                                if (key === 'categorie' && typeof value === 'object') {
+                                    formData.append(key, value.id.toString());
+                                } else {
+                                    formData.append(key, value.toString());
+                                }
                             }
                         });
 
@@ -450,16 +464,26 @@ const AdminDashboard = () => {
                             });
                             setProducts([...products, response.data]);
                         } else {
-                            response = await api.put(`/produits/${currentItem.id}/`, formData, {
-                                headers: {
-                                    'Content-Type': 'multipart/form-data',
-                                },
-                            });
-                            setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
+                            if (currentItem){
+                                response = await api.put(`/produits/${currentItem.id}/`, formData, {
+                                    headers: {
+                                        'Content-Type': 'multipart/form-data',
+                                    },
+                                });
+                                setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
+                            }
                         }
                     } else {
-                        response = await api.put(`/produits/${currentItem.id}/`, productForm);
-                        setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
+                        if (currentItem){
+                            // Create a new object with the correct category ID if categorie is an object
+                            const formData = { ...productForm };
+                            if (typeof formData.categorie === 'object' && formData.categorie !== null) {
+                                formData.categorie = formData.categorie.id;
+                            }
+
+                            response = await api.put(`/produits/${currentItem.id}/`, formData);
+                            setProducts(products.map(p => p.id === currentItem.id ? response.data : p));
+                        }
                     }
                     setProductImage(null);
                     break;
@@ -468,8 +492,12 @@ const AdminDashboard = () => {
                         response = await api.post('/methode-paiement/', paymentMethodForm);
                         setPaymentMethods([...paymentMethods, response.data]);
                     } else {
-                        response = await api.put(`/methode-paiement/${currentItem.id}/`, paymentMethodForm);
-                        setPaymentMethods(paymentMethods.map(m => m.id === currentItem.id ? response.data : m));
+
+                        if (currentItem){
+                            // This endpoint might need to be created in the backend
+                             response = await api.put(`/methode-paiement/${currentItem.id}/`, paymentMethodForm);
+                             setPaymentMethods(paymentMethods.map(m => m.id === currentItem.id ? response.data : m));
+                        }
                     }
                     break;
                 case 'keys':
@@ -477,8 +505,11 @@ const AdminDashboard = () => {
                         response = await api.post('/cles/', keyForm);
                         setKeys([...keys, response.data]);
                     } else {
-                        response = await api.put(`/cles/${currentItem.id}/`, keyForm);
-                        setKeys(keys.map(k => k.id === currentItem.id ? response.data : k));
+                        if (currentItem){
+                            // This endpoint might need to be created in the backend
+                            response = await api.put(`/cles/${currentItem.id}/`, keyForm);
+                            setKeys(keys.map(k => k.id === currentItem.id ? response.data : k));
+                        }
                     }
                     break;
                 case 'actions':
@@ -503,57 +534,57 @@ const AdminDashboard = () => {
 
                                 const actionsResponse = await api.get('/actions/');
                                 setActions(actionsResponse.data);
-                            } catch (err) {
+                            } catch {
                             }
                         } else {
                             setActions([...actions, newAction]);
                         }
                     } else {
-                        // For existing actions, update the action
-                        response = await api.put(`/actions/${currentItem.id}/`, actionForm);
-                        const updatedAction = response.data;
+                        if (currentItem){
+                            response = await api.put(`/actions/${currentItem.id}/`, actionForm);
+                            const updatedAction = response.data;
 
-                        // Get existing elements for this action
-                        const existingElements = elementsAchatDevis.filter(element => element.action === currentItem.id);
+                            const existingElements = elementsAchatDevis.filter(element => element.action === currentItem.id);
 
-                        // Delete elements that are no longer in the form
-                        const elementsToDelete = existingElements.filter(element =>
-                            !actionProductsForm.some(product => product.id === element.id)
-                        );
+                            // Delete elements that are no longer in the form
+                            const elementsToDelete = existingElements.filter(element =>
+                                !actionProductsForm.some(product => product.id === element.id)
+                            );
 
-                        // Update existing elements and create new ones
-                        const elementsToUpdateOrCreate = actionProductsForm.map(product => ({
-                            id: product.id, // Will be undefined for new elements
-                            action: currentItem.id,
-                            produit: product.produit_id,
-                            quantite: product.quantite,
-                            prix_total: product.prix_total
-                        }));
-
-                        try {
-                            // Delete elements
-                            await Promise.all(elementsToDelete.map(element =>
-                                api.delete(`/elements/${element.id}/`)
-                            ));
-
-                            // Update or create elements
-                            await Promise.all(elementsToUpdateOrCreate.map(element => {
-                                if (element.id) {
-                                    return api.put(`/elements/${element.id}/`, element);
-                                } else {
-                                    return api.post('/elements/', element);
-                                }
+                            // Update existing elements and create new ones
+                            const elementsToUpdateOrCreate = actionProductsForm.map(product => ({
+                                id: product.id, // Will be undefined for new elements
+                                action: currentItem.id,
+                                produit: product.produit_id,
+                                quantite: product.quantite,
+                                prix_total: product.prix_total
                             }));
 
-                            // Refresh the actions list to get the updated data
-                            const actionsResponse = await api.get('/actions/');
-                            setActions(actionsResponse.data);
-                        } catch (err) {
-                            console.error('Error updating elements:', err);
-                            toast.error('Erreur lors de la mise à jour des éléments');
+                            try {
+                                // Delete elements
+                                await Promise.all(elementsToDelete.map(element =>
+                                    api.delete(`/elements/${element.id}/`)
+                                ));
 
-                            // Still update the actions list with the updated action
-                            setActions(actions.map(a => a.id === currentItem.id ? updatedAction : a));
+                                // Update or create elements
+                                await Promise.all(elementsToUpdateOrCreate.map(element => {
+                                    if (element.id) {
+                                        return api.put(`/elements/${element.id}/`, element);
+                                    } else {
+                                        return api.post('/elements/', element);
+                                    }
+                                }));
+
+                                // Refresh the actions list to get the updated data
+                                const actionsResponse = await api.get('/actions/');
+                                setActions(actionsResponse.data);
+                            } catch (err) {
+                                console.error('Error updating elements:', err);
+                                toast.error('Erreur lors de la mise à jour des éléments');
+
+                                // Still update the actions list with the updated action
+                                setActions(actions.map(a => a.id === currentItem.id ? updatedAction : a));
+                            }
                         }
                     }
                     break;
@@ -916,7 +947,7 @@ const AdminDashboard = () => {
                             <label className="block text-sm font-medium text-gray-700">Catégorie</label>
                             <select
                                 name="categorie"
-                                value={productForm.categorie || ''}
+                                value={typeof productForm.categorie === 'object' ? productForm.categorie.id : productForm.categorie || ''}
                                 onChange={handleFormChange}
                                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                 required
@@ -1148,7 +1179,7 @@ const AdminDashboard = () => {
               </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">{action.prix} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{new Date(action.date_action).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{action.date_action ? new Date(action.date_action).toLocaleDateString() : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">{action.client_name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="max-h-20 overflow-y-auto">
@@ -1174,7 +1205,7 @@ const AdminDashboard = () => {
               </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    {action.type === 'achat' && (!action.livree || !action.payee) && (
+                                    {action.type === 'achat' && (!action.livree || !action.payee) && action.id !== undefined && (
                                         <button
                                             onClick={() => handleApproveAction(action.id)}
                                             className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs mr-2"
@@ -1188,12 +1219,14 @@ const AdminDashboard = () => {
                                     >
                                         <FiEdit className="inline"/> Modifier
                                     </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(action.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
+                                    {action.id !== undefined && (
+                                        <button
+                                            onClick={() => handleDeleteItem(action.id)}
+                                            className="text-red-600 hover:text-red-900"
+                                        >
+                                            <FiTrash2 className="inline"/> Supprimer
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -1432,14 +1465,14 @@ const AdminDashboard = () => {
                     </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">{action.prix} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{new Date(action.date_action).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">{action.date_action ? new Date(action.date_action).toLocaleDateString() : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     {action.client_name || users.find(u => u.id === action.client)?.nom_complet || 'N/A'}
                                 </td>
                                 <td className="px-6 py-4">
                                     {action.elements_details ? (
                                         <div className="max-h-20 overflow-y-auto">
-                                            {action.elements_details.map((element: any, index: number) => (
+                                            {action.elements_details.map((element: ActionElementDetail, index: number) => (
                                                 <div key={index} className="mb-1">
                                                     <span className="font-medium">{element.produit_nom}</span>
                                                     <span className="text-gray-500 ml-2">x{element.quantite}</span>
@@ -1472,12 +1505,14 @@ const AdminDashboard = () => {
                                     >
                                         <FiEdit className="inline"/> Modifier
                                     </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(action.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
+                                    {action.id !== undefined && (
+                                        <button
+                                            onClick={() => handleDeleteItem(action.id)}
+                                            className="text-red-600 hover:text-red-900"
+                                        >
+                                            <FiTrash2 className="inline"/> Supprimer
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -1517,6 +1552,7 @@ const AdminDashboard = () => {
         const prix_total = selectedProduct.prix * productToAdd.quantite;
 
         const newProduct = {
+            id: -Date.now(), // Generate a temporary negative ID using timestamp
             produit_id: selectedProduct.id,
             produit_nom: selectedProduct.nom,
             quantite: productToAdd.quantite,
@@ -1542,7 +1578,8 @@ const AdminDashboard = () => {
         }, 0);
     };
 
-    const handleApproveAction = async (actionId: number) => {
+    const handleApproveAction = async (actionId?: number) => {
+        if (actionId === undefined) return;
         if (!confirm('Êtes-vous sûr de vouloir approuver cette vente ? Cela marquera la vente comme payée et livrée, et enverra les clés au client par email.')) {
             return;
         }
@@ -1817,5 +1854,3 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
-
-
