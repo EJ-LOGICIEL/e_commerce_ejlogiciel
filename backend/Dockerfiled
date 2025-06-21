@@ -1,0 +1,58 @@
+FROM python:3.12-slim-bullseye AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Installer les dépendances système nécessaires pour le build
+RUN apt-get update && apt-get install -y \
+    build-essential curl libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ajouter le dossier de l'application
+WORKDIR /app
+
+# Copier les fichiers de configuration
+COPY pyproject.toml ./
+
+# Créer un environnement virtuel
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Installer les dépendances dans l'environnement virtuel
+COPY . .
+RUN pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir . && \
+    pip install --no-cache-dir gunicorn
+
+# Image finale
+FROM python:3.12-slim-bullseye
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Installer uniquement les dépendances système nécessaires pour l'exécution
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Créer les répertoires pour les médias et les fichiers statiques
+RUN mkdir -p /app/media /app/static && \
+    chmod -R 755 /app/media /app/static
+
+# Copier l'environnement virtuel depuis l'étape de build
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copier uniquement les fichiers nécessaires pour l'application
+COPY --from=builder /app/manage.py /app/
+COPY --from=builder /app/api /app/api
+COPY --from=builder /app/config /app/config
+
+# Exposer le port 8001
+EXPOSE 8001
+
+# Commande pour collecter les fichiers statiques au démarrage du conteneur
+# Cette commande sera exécutée avant de lancer Gunicorn
+ENTRYPOINT ["sh", "-c", "python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8001 --workers 3 --timeout 120 --keep-alive 5 config.wsgi:application"]

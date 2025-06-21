@@ -1,23 +1,11 @@
 'use client';
 
-import React, {useEffect, useState} from 'react';
-import {useSelector} from 'react-redux';
-import {selectCurrentUser} from '@/features/user/userSlice';
-import {useRouter} from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '@/features/user/userSlice';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/apis';
-import {
-    FiCheck,
-    FiCreditCard,
-    FiEdit,
-    FiKey,
-    FiPackage,
-    FiPlus,
-    FiShoppingCart,
-    FiTag,
-    FiTrash2,
-    FiUsers,
-    FiX
-} from 'react-icons/fi';
+import { FiPlus } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import {
     ActionElementDetail,
@@ -29,7 +17,25 @@ import {
     TypeProduit,
     UserState
 } from '@/utils/types';
-import {AxiosResponse} from "axios";
+import { AxiosResponse } from "axios";
+
+// Import components
+import TabNavigation from './components/TabNavigation';
+import SalesStats from './components/SalesStats';
+import FormModal from './components/FormModal';
+import ProductModal from './components/ProductModal';
+import UserForm from './components/UserForm';
+import CategoryForm from './components/CategoryForm';
+import ProductForm from './components/ProductForm';
+import PaymentMethodForm from './components/PaymentMethodForm';
+import KeyForm from './components/KeyForm';
+import ActionForm from './components/ActionForm';
+import UsersTable from './components/UsersTable';
+import CategoriesTable from './components/CategoriesTable';
+import ProductsTable from './components/ProductsTable';
+import PaymentMethodsTable from './components/PaymentMethodsTable';
+import KeysTable from './components/KeysTable';
+import ActionsTable from './components/ActionsTable';
 
 const AdminDashboard = () => {
     const user = useSelector(selectCurrentUser);
@@ -127,9 +133,9 @@ const AdminDashboard = () => {
                     const purchaseActions: Partial<ActionHistory>[] = actionsData.filter((action: Partial<ActionHistory>) => action.type === 'achat');
                     const totalSales = purchaseActions.length;
                     const totalRevenue = purchaseActions.reduce((sum: number, action: Partial<ActionHistory>) => {
-  const prix = action.prix ?? 0; // si prix est undefined, on met 0
-  return sum + prix;
-}, 0);
+                        const prix = action.prix ?? 0; // si prix est undefined, on met 0
+                        return sum + prix;
+                    }, 0);
 
                     const paidSales = purchaseActions.filter((action) => action.payee).length;
                     const unpaidSales = totalSales - paidSales;
@@ -590,951 +596,15 @@ const AdminDashboard = () => {
                     break;
             }
 
-        } catch {
+            toast.success(modalType === 'add' ? 'Élément ajouté avec succès' : 'Élément modifié avec succès');
+            setShowModal(false);
+            setIsLoading(false);
+        } catch (err) {
+            console.error('Error submitting form:', err);
+            toast.error('Erreur lors de la soumission du formulaire');
+            setIsLoading(false);
         }
     };
-
-    const renderForm = () => {
-        switch (activeTab) {
-            case 'users':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom d&#39;utilisateur</label>
-                            <input
-                                type="text"
-                                name="username"
-                                value={userForm.username || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={userForm.email || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom complet</label>
-                            <input
-                                type="text"
-                                name="nom_complet"
-                                value={userForm.nom_complet || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Rôle</label>
-                            <select
-                                name="role"
-                                value={userForm.role || 'client'}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="client">Client</option>
-                                <option value="vendeur">Vendeur</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Type</label>
-                            <select
-                                name="type"
-                                value={userForm.type || 'particulier'}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="particulier">Particulier</option>
-                                <option value="entreprise">Entreprise</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Numéro de téléphone</label>
-                            <input
-                                type="text"
-                                name="numero_telephone"
-                                value={userForm.numero_telephone || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Adresse</label>
-                            <input
-                                type="text"
-                                name="adresse"
-                                value={userForm.adresse || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        {modalType === 'add' && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    onChange={handleFormChange}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    required={modalType === 'add'}
-                                />
-                            </div>
-                        )}
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            case 'actions':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-1">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Type</label>
-                            <select
-                                name="type"
-                                value={actionForm.type || 'achat'}
-                                onChange={handleFormChange}
-                                className="w-full px-3 py-2 border border-gray-300
-                                rounded-md shadow-sm focus:outline-none focus:ring-indigo-500
-                                 focus:border-indigo-500"
-                                required
-                            >
-                                <option value="achat">Achat</option>
-                                <option value="devis">Devis</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Prix</label>
-                            <input
-                                type="number"
-                                name="prix"
-                                value={actionForm.prix || ''}
-                                onChange={handleFormChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
-                                 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Client</label>
-                            <select
-                                name="client"
-                                value={actionForm.client || ''}
-                                onChange={handleFormChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm
-                                focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            >
-                                <option value="">Sélectionner un client</option>
-                                {users.filter(u => u.role === 'client').map(user => (
-                                    <option key={user.id} value={user.id}>{user.nom_complet} ({user.username})</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Vendeur</label>
-                            <select
-                                name="vendeur"
-                                value={actionForm.vendeur || ''}
-                                onChange={handleFormChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md
-                                 shadow-sm focus:outline-none focus:ring-indigo-500
-                                 focus:border-indigo-500"
-                            >
-                                <option value="">Sélectionner un vendeur (optionnel)</option>
-                                {users.filter(u => u.role === 'vendeur' || u.role === 'admin').map(user => (
-                                    <option key={user.id} value={user.id}>{user.nom_complet} ({user.username})</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Méthode de paiement</label>
-                            <select
-                                name="methode_paiement"
-                                value={actionForm.methode_paiement || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            >
-                                <option value="">Sélectionner une méthode de paiement</option>
-                                {paymentMethods.map(method => (
-                                    <option key={method.id} value={method.id}>{method.nom}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Products section */}
-                        <div className="mt-6">
-                            <h3 className="text-lg font-medium text-gray-900">Produits</h3>
-                            <div className="mt-2 border rounded-md p-4">
-                                {actionProductsForm.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {actionProductsForm.map((product, index) => (
-                                            <div key={index}
-                                                 className="flex items-center space-x-4 p-2 border rounded-md">
-                                                <div className="flex-grow">
-                                                    <p className="font-medium">{product.produit_nom}</p>
-                                                    <div className="flex items-center mt-1">
-                                                        <span
-                                                            className="text-sm text-gray-500">Quantité: {product.quantite}</span>
-                                                        <span
-                                                            className="text-sm text-gray-500 ml-4">Prix unitaire: {product.prix_unitaire} Ar</span>
-                                                        <span
-                                                            className="text-sm text-gray-500 ml-4">Prix total: {product.prix_total} Ar</span>
-                                                    </div>
-                                                </div>
-                                                {modalType === 'edit' && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const updatedProducts = [...actionProductsForm];
-                                                            updatedProducts.splice(index, 1);
-                                                            setActionProductsForm(updatedProducts);
-
-                                                            // Recalculate total price
-                                                            const newTotalPrice = updatedProducts.reduce((sum, p) => sum + p.prix_total, 0);
-                                                            setActionForm({...actionForm, prix: newTotalPrice});
-                                                        }}
-                                                        className="text-red-600 hover:text-red-900"
-                                                    >
-                                                        <FiTrash2 className="h-5 w-5"/>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500 text-center py-4">Aucun produit ajouté</p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="payee"
-                                name="payee"
-                                checked={actionForm.payee || false}
-                                onChange={handleFormChange}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="payee" className="ml-2 block text-sm text-gray-900">
-                                Payée
-                            </label>
-                        </div>
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="livree"
-                                name="livree"
-                                checked={actionForm.livree || false}
-                                onChange={handleFormChange}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="livree" className="ml-2 block text-sm text-gray-900">
-                                Livrée
-                            </label>
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            case 'categories':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom</label>
-                            <input
-                                type="text"
-                                name="nom"
-                                value={categoryForm.nom || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea
-                                name="description"
-                                value={categoryForm.description || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            case 'products':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom</label>
-                            <input
-                                type="text"
-                                name="nom"
-                                value={productForm.nom || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea
-                                name="description"
-                                value={productForm.description || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Catégorie</label>
-                            <select
-                                name="categorie"
-                                value={typeof productForm.categorie === 'object' ? productForm.categorie.id : productForm.categorie || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            >
-                                <option value="">Sélectionner une catégorie</option>
-                                {categories.map(category => (
-                                    <option key={category.id} value={category.id}>{category.nom}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Validité</label>
-                            <select
-                                name="validite"
-                                value={productForm.validite || '1 ans'}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="1 ans">1 ans</option>
-                                <option value="2 ans">2 ans</option>
-                                <option value="3 ans">3 ans</option>
-                                <option value="a vie">À vie</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Prix minimum</label>
-                            <input
-                                type="number"
-                                name="prix_min"
-                                value={productForm.prix_min || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Prix</label>
-                            <input
-                                type="number"
-                                name="prix"
-                                value={productForm.prix || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Prix maximum</label>
-                            <input
-                                type="number"
-                                name="prix_max"
-                                value={productForm.prix_max || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Image du produit</label>
-                            <input
-                                type="file"
-                                name="image"
-                                onChange={handleFileChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                accept="image/*"
-                                required={modalType === 'add'}
-                            />
-                            {modalType === 'edit' && productForm.image && !productImage && (
-                                <div className="mt-2">
-                                    <p className="text-sm text-gray-500">Image
-                                        actuelle: {productForm.image.split('/').pop()}</p>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowModal(false);
-                                    setProductImage(null);
-                                }}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            case 'payment-methods':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Nom</label>
-                            <input
-                                type="text"
-                                name="nom"
-                                value={paymentMethodForm.nom || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea
-                                name="description"
-                                value={paymentMethodForm.description || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            case 'keys':
-                return (
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Contenu</label>
-                            <input
-                                type="text"
-                                name="contenue"
-                                value={keyForm.contenue || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Produit</label>
-                            <select
-                                name="produit"
-                                value={keyForm.produit || ''}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                required
-                            >
-                                <option value="">Sélectionner un produit</option>
-                                {products.map(product => (
-                                    <option key={product.id} value={product.id}>{product.nom}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Disponibilité</label>
-                            <select
-                                name="disponiblite"
-                                value={keyForm.disponiblite ? 'true' : 'false'}
-                                onChange={handleFormChange}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="true">Disponible</option>
-                                <option value="false">Non disponible</option>
-                            </select>
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                type="button"
-                                onClick={() => setShowModal(false)}
-                                className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                            >
-                                {isLoading ? 'Chargement...' : modalType === 'add' ? 'Ajouter' : 'Modifier'}
-                            </button>
-                        </div>
-                    </form>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const renderTable = () => {
-        switch (activeTab) {
-            case 'actions':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {actions.map(action => (
-                            <tr key={action.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.code_action}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  action.type === 'achat' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-              }`}>
-                {action.type === 'achat' ? 'Achat' : 'Devis'}
-              </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.prix} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.date_action ? new Date(action.date_action).toLocaleDateString() : 'N/A'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.client_name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="max-h-20 overflow-y-auto">
-                                        {action.elements_details?.map((element, idx) => (
-                                            <div key={idx} className="text-xs mb-1">
-                                                {element.produit_nom} x{element.quantite}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.commentaire} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  action.payee ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {action.payee ? 'Payé' : 'Non payé'}
-              </span>
-                                    <span
-                                        className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            action.livree ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                {action.livree ? 'Livré' : 'Non livré'}
-              </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    {action.type === 'achat' && (!action.livree || !action.payee) && action.id !== undefined && (
-                                        <button
-                                            onClick={() => handleApproveAction(action.id)}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs mr-2"
-                                        >
-                                            <FiCheck className="inline mr-1"/> Approuver
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => handleEditItem(action)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    {action.id !== undefined && (
-                                        <button
-                                            onClick={() => handleDeleteItem(action.id)}
-                                            className="text-red-600 hover:text-red-900"
-                                        >
-                                            <FiTrash2 className="inline"/> Supprimer
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'users':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom
-                                d&#39;utilisateur
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom
-                                complet
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {users.map(user => (
-                            <tr key={user.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{user.nom_complet}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                            user.role === 'vendeur' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(user)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(user.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'categories':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {categories.map(category => (
-                            <tr key={category.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{category.nom}</td>
-                                <td className="px-6 py-4">{category.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(category)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(category.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'products':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Catégorie</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {products.map(product => (
-                            <tr key={product.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{product.nom}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{product.prix} €</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    {categories.find(c => c.id === product.categorie)?.nom || 'N/A'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{product.code_produit}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(product)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(product.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'payment-methods':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {paymentMethods.map(method => (
-                            <tr key={method.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{method.nom}</td>
-                                <td className="px-6 py-4">{method.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(method)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(method.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'keys':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contenu</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disponibilité</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {keys.map(key => (
-                            <tr key={key.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{key.contenue.substring(0, 4)}****</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    {products.find(p => p.id === key.produit)?.nom || 'N/A'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        key.disponiblite ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {key.disponiblite ? 'Disponible' : 'Non disponible'}
-                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{key.code_cle}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(key)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteItem(key.id)}
-                                        className="text-red-600 hover:text-red-900"
-                                    >
-                                        <FiTrash2 className="inline"/> Supprimer
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            case 'actions':
-                return (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produits</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ref</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {actions.map(action => (
-                            <tr key={action.id}>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.code_action}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        action.type === 'achat' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {action.type === 'achat' ? 'Achat' : 'Devis'}
-                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.prix} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.date_action ? new Date(action.date_action).toLocaleDateString() : 'N/A'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    {action.client_name || users.find(u => u.id === action.client)?.nom_complet || 'N/A'}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {action.elements_details ? (
-                                        <div className="max-h-20 overflow-y-auto">
-                                            {action.elements_details.map((element: ActionElementDetail, index: number) => (
-                                                <div key={index} className="mb-1">
-                                                    <span className="font-medium">{element.produit_nom}</span>
-                                                    <span className="text-gray-500 ml-2">x{element.quantite}</span>
-                                                    <span className="text-gray-500 ml-2">{element.prix_total} Ar</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <span className="text-gray-500">Aucun produit</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">{action.commentaire} Ar</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        action.payee ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {action.payee ? 'Payé' : 'Non payé'}
-                    </span>
-                                    <span
-                                        className={`ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                            action.livree ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                      {action.livree ? 'Livré' : 'Non livré'}
-                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button
-                                        onClick={() => handleEditItem(action)}
-                                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                    >
-                                        <FiEdit className="inline"/> Modifier
-                                    </button>
-                                    {action.id !== undefined && (
-                                        <button
-                                            onClick={() => handleDeleteItem(action.id)}
-                                            className="text-red-600 hover:text-red-900"
-                                        >
-                                            <FiTrash2 className="inline"/> Supprimer
-                                        </button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                );
-            default:
-                return null;
-        }
-    };
-
-    // If user is not admin, show loading or redirect
-    if (!user || user.role !== 'admin') {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-800">Chargement...</h1>
-                    <p className="mt-2 text-gray-600">Vérification des autorisations</p>
-                </div>
-            </div>
-        );
-    }
 
     // Handle product selection
     const handleAddProductToAction = () => {
@@ -1578,6 +648,16 @@ const AdminDashboard = () => {
         }, 0);
     };
 
+    const handleRemoveProduct = (index: number) => {
+        const updatedProducts = [...actionProductsForm];
+        updatedProducts.splice(index, 1);
+        setActionProductsForm(updatedProducts);
+
+        // Recalculate total price
+        const newTotalPrice = updatedProducts.reduce((sum, p) => sum + p.prix_total, 0);
+        setActionForm({...actionForm, prix: newTotalPrice});
+    };
+
     const handleApproveAction = async (actionId?: number) => {
         if (actionId === undefined) return;
         if (!confirm('Êtes-vous sûr de vouloir approuver cette vente ? Cela marquera la vente comme payée et livrée, et enverra les clés au client par email.')) {
@@ -1610,82 +690,30 @@ const AdminDashboard = () => {
         }
     };
 
+    // If user is not admin, show loading or redirect
+    if (!user || user.role !== 'admin') {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-gray-800">Chargement...</h1>
+                    <p className="mt-2 text-gray-600">Vérification des autorisations</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">Tableau de bord administrateur</h1>
 
-            {/* Product Modal - Moved outside other modals with higher z-index */}
-
             {/* Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8">
-                    <button
-                        onClick={() => setActiveTab('users')}
-                        className={`${
-                            activeTab === 'users'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiUsers className="inline mr-2"/> Utilisateurs
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('categories')}
-                        className={`${
-                            activeTab === 'categories'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiTag className="inline mr-2"/> Catégories
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('products')}
-                        className={`${
-                            activeTab === 'products'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiPackage className="inline mr-2"/> Produits
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('payment-methods')}
-                        className={`${
-                            activeTab === 'payment-methods'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiCreditCard className="inline mr-2"/> Méthodes de paiement
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('keys')}
-                        className={`${
-                            activeTab === 'keys'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiKey className="inline mr-2"/> Clés
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('actions')}
-                        className={`${
-                            activeTab === 'actions'
-                                ? 'border-indigo-500 text-indigo-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-                    >
-                        <FiShoppingCart className="inline mr-2"/> Ventes
-                    </button>
-                </nav>
-            </div>
+            <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
             {/* Error message */}
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
                      role="alert">
+                    <span className="block sm:inline">{error}</span>
                 </div>
             )}
 
@@ -1693,6 +721,7 @@ const AdminDashboard = () => {
             <div className="mb-4">
                 <button
                     onClick={handleAddItem}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                     <FiPlus className="mr-2"/> Ajouter
                 </button>
@@ -1700,155 +729,152 @@ const AdminDashboard = () => {
 
             {/* Sales Statistics */}
             {activeTab === 'actions' && !isLoading && (
-                <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Ventes</h3>
-                        <div className="flex justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500">Total</p>
-                                <p className="text-2xl font-bold">{salesStats.totalSales}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Chiffre d&#39;affaires</p>
-                                <p className="text-2xl font-bold">{salesStats.totalRevenue.toLocaleString()} Ar</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Paiements</h3>
-                        <div className="flex justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500">Payées</p>
-                                <p className="text-2xl font-bold text-green-600">{salesStats.paidSales}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Non payées</p>
-                                <p className="text-2xl font-bold text-red-600">{salesStats.unpaidSales}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-4 rounded-lg shadow">
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Livraisons</h3>
-                        <div className="flex justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500">Livrées</p>
-                                <p className="text-2xl font-bold text-green-600">{salesStats.deliveredSales}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Non livrées</p>
-                                <p className="text-2xl font-bold text-red-600">{salesStats.undeliveredSales}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <SalesStats salesStats={salesStats} />
             )}
 
             {/* Data table */}
             <div className="bg-white shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
                 <div className="overflow-x-auto">
-                    {isLoading ? (
-                        <div className="py-12 text-center">
-                            <div
-                                className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-                            <p className="mt-4 text-gray-600">Chargement des données...</p>
-                        </div>
-                    ) : (
-                        renderTable()
+                    {activeTab === 'users' && (
+                        <UsersTable 
+                            users={users} 
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            isLoading={isLoading} 
+                        />
+                    )}
+                    {activeTab === 'categories' && (
+                        <CategoriesTable 
+                            categories={categories} 
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            isLoading={isLoading} 
+                        />
+                    )}
+                    {activeTab === 'products' && (
+                        <ProductsTable 
+                            products={products} 
+                            categories={categories}
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            isLoading={isLoading} 
+                        />
+                    )}
+                    {activeTab === 'payment-methods' && (
+                        <PaymentMethodsTable 
+                            paymentMethods={paymentMethods} 
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            isLoading={isLoading} 
+                        />
+                    )}
+                    {activeTab === 'keys' && (
+                        <KeysTable 
+                            keys={keys} 
+                            products={products}
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            isLoading={isLoading} 
+                        />
+                    )}
+                    {activeTab === 'actions' && (
+                        <ActionsTable 
+                            actions={actions} 
+                            handleEditItem={handleEditItem} 
+                            handleDeleteItem={handleDeleteItem} 
+                            handleApproveAction={handleApproveAction}
+                            isLoading={isLoading} 
+                        />
                     )}
                 </div>
             </div>
 
             {/* Modal for add/edit */}
-            {showModal && (
-                <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                    <div
-                        className="bg-white rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full">
-                        <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                            <div className="sm:flex sm:items-start">
-                                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                    <h3 className="text-lg leading-6 font-medium text-gray-900">
-                                        {modalType === 'add' ? 'Ajouter un nouvel élément' : 'Modifier l\'élément'}
-                                    </h3>
-                                    <div className="mt-4">
-                                        {renderForm()}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-            {/* Product Modal - Rendered at root level with higher z-index */}
-            {showProductModal && (
-                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-[9999]">
-                    <div className="bg-white rounded-lg p-8 max-w-md w-full">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">Ajouter un produit</h2>
-                            <button
-                                onClick={() => setShowProductModal(false)}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                <FiX className="h-6 w-6"/>
-                            </button>
-                        </div>
+            <FormModal 
+                isOpen={showModal} 
+                onClose={() => setShowModal(false)} 
+                title={modalType === 'add' ? 'Ajouter un nouvel élément' : 'Modifier l\'élément'}
+            >
+                {activeTab === 'users' && (
+                    <UserForm 
+                        userForm={userForm}
+                        handleFormChange={handleFormChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                    />
+                )}
+                {activeTab === 'categories' && (
+                    <CategoryForm 
+                        categoryForm={categoryForm}
+                        handleFormChange={handleFormChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                    />
+                )}
+                {activeTab === 'products' && (
+                    <ProductForm 
+                        productForm={productForm}
+                        categories={categories}
+                        handleFormChange={handleFormChange}
+                        handleFileChange={handleFileChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                        productImage={productImage}
+                    />
+                )}
+                {activeTab === 'payment-methods' && (
+                    <PaymentMethodForm 
+                        paymentMethodForm={paymentMethodForm}
+                        handleFormChange={handleFormChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                    />
+                )}
+                {activeTab === 'keys' && (
+                    <KeyForm 
+                        keyForm={keyForm}
+                        products={products}
+                        handleFormChange={handleFormChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                    />
+                )}
+                {activeTab === 'actions' && (
+                    <ActionForm 
+                        actionForm={actionForm}
+                        actionProductsForm={actionProductsForm}
+                        users={users}
+                        paymentMethods={paymentMethods}
+                        handleFormChange={handleFormChange}
+                        handleSubmit={handleSubmit}
+                        isLoading={isLoading}
+                        modalType={modalType}
+                        onCancel={() => setShowModal(false)}
+                        onAddProduct={() => setShowProductModal(true)}
+                        onRemoveProduct={handleRemoveProduct}
+                    />
+                )}
+            </FormModal>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Produit</label>
-                                <select
-                                    value={productToAdd.produit_id || ''}
-                                    onChange={(e) => setProductToAdd({
-                                        ...productToAdd,
-                                        produit_id: parseInt(e.target.value)
-                                    })}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    required
-                                >
-                                    <option value="">Sélectionner un produit</option>
-                                    {products.map(product => (
-                                        <option key={product.id}
-                                                value={product.id}>{product.nom} - {product.prix} Ar</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Quantité</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={productToAdd.quantite}
-                                    onChange={(e) => setProductToAdd({
-                                        ...productToAdd,
-                                        quantite: parseInt(e.target.value)
-                                    })}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    required
-                                />
-                            </div>
-
-                            <div className="flex justify-end mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowProductModal(false)}
-                                    className="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={handleAddProductToAction}
-                                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                                >
-                                    Ajouter
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Product Modal */}
+            <ProductModal 
+                isOpen={showProductModal}
+                onClose={() => setShowProductModal(false)}
+                products={products}
+                productToAdd={productToAdd}
+                setProductToAdd={setProductToAdd}
+                handleAddProductToAction={handleAddProductToAction}
+            />
         </div>
     );
 };

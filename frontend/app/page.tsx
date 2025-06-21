@@ -38,7 +38,6 @@ export default function HomePage() {
     const loading = useSelector(selectLoading);
     const [featuredProducts, setFeaturedProducts] = useState<TypeProduit[]>([]);
     const [heroProduct, setHeroProduct] = useState<TypeProduit | null>(null);
-    const [currentProductIndex, setCurrentProductIndex] = useState<number>(0);
     const panier: TypeCartItem[] = useSelector(selectPanier);
 
     const handleAddToCart = (produit: TypeProduit) => {
@@ -57,19 +56,19 @@ export default function HomePage() {
         }
     }, [products]);
 
-    useEffect(() => {
-        if (products.length === 0) return;
-
-        const interval = setInterval(() => {
-            setCurrentProductIndex((prevIndex) => {
-                const nextIndex = (prevIndex + 1) % products.length;
-                setHeroProduct(products[nextIndex]);
-                return nextIndex;
-            });
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [products]);
+    // useEffect(() => {
+    //     if (products.length === 0) return;
+    //
+    //     const interval = setInterval(() => {
+    //         setCurrentProductIndex((prevIndex) => {
+    //             const nextIndex = (prevIndex + 1) % products.length;
+    //             setHeroProduct(products[nextIndex]);
+    //             return nextIndex;
+    //         });
+    //     }, 10000);
+    //
+    //     return () => clearInterval(interval);
+    // }, [products]);
 
     return (
         <main

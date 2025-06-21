@@ -17,3 +17,6 @@ dependencies = [
     "redis>=6.1.0",
     "reportlab>=4.4.1",
 ]
+
+[tool.setuptools]
+packages = ["api", "config"]
