@@ -12,6 +12,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang='en'>
+        <head>
+            <meta charSet="UTF-8"/>
+            <link rel="icon" href="/ej.jpg"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <title>ej-logiciel</title>
+        </head>
         <body className='bg-gradient-to-r from-blue-50 to-indigo-50'>
         <ReduxProvider>
             <div className='grid h-screen w-screen grid-rows-[auto_1fr_auto]'>
