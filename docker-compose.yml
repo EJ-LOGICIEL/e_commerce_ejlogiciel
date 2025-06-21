@@ -1,3 +1,4 @@
+
 services:
   # Service PostgreSQL
   db:
@@ -29,6 +30,7 @@ services:
 
   # Service Backend (Django)
   backend:
+    env_file: .env
     build:
       context: ./backend
       dockerfile: Dockerfile
